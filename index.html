@@ -4,7 +4,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>Rütmiharjutuste generaator (beeta)</title>
-
   <style>
     body { font-family: sans-serif; max-width: 900px; margin: 30px auto; padding: 0 12px; }
     h1 { margin-bottom: 6px; }
@@ -17,29 +16,21 @@
   </style>
 </head>
 <body>
-
   <h1>Rütmiharjutuste generaator (beeta)</h1>
   <p>Genereeri lihtne rütmiharjutus algklassidele.</p>
-
   <div class="row">
     <button id="btn">Genereeri rütm</button>
     <span class="pill">4/4</span>
     <span class="pill">ta = veerand</span>
     <span class="pill">ti-ti = kaks kaheksandikku</span>
   </div>
-
   <div id="paper"></div>
-
   <p class="small">
     ⚠️ Beetaversioon. Kui midagi ei tööta, proovi lehte värskendada (Ctrl+Shift+R / Cmd+Shift+R).
   </p>
-
   <!-- ABCJS -->
   <script src="https://cdn.jsdelivr.net/npm/abcjs@6.2.3/dist/abcjs-basic-min.js"></script>
-
   <script>
-    // q   = veerand
-    // 8-8 = kaks kaheksandikku (ti-ti)
     const barPatterns = [
       ["q","q","8-8","q"],
       ["q","8-8","q","q"],
@@ -47,49 +38,42 @@
       ["q","q","q","q"],
       ["8-8","8-8","q","q"]
     ];
-
+    
     function randomBar() {
       return barPatterns[Math.floor(Math.random() * barPatterns.length)];
     }
-
-    // ABC: L:1/8
-    // NB! Kasutame SUURTÄHTE "C" (madalam register) -> varred lähevad loomulikumalt üles.
-    // veerand = C2
-    // ti-ti = CC (ilma vaheta) -> ühe talaga
+    
     function barToABC(bar) {
       let s = "";
       for (const t of bar) {
-        if (t === "q") s += "C2 ";
-        if (t === "8-8") s += "CC ";
+        if (t === "q") s += "c2 ";
+        if (t === "8-8") s += "cc ";
       }
       return s.trim();
     }
-
+    
     function generateABC() {
       const b1 = randomBar();
       const b2 = randomBar();
-
       return `X:1
 M:4/4
 L:1/8
-V:1 stem=up clef=none stafflines=0
+V:1 clef=none stafflines=0
 K:none
 [V:1] ${barToABC(b1)} | ${barToABC(b2)} |]`;
     }
-
+    
     function render() {
       const abc = generateABC();
       document.getElementById("paper").innerHTML = "";
-
       ABCJS.renderAbc("paper", abc, {
         responsive: "resize",
         staffwidth: 760
       });
     }
-
+    
     document.getElementById("btn").addEventListener("click", render);
     render();
   </script>
-
 </body>
 </html>
