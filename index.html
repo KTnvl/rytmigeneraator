@@ -4,21 +4,10 @@
   <meta charset="UTF-8" />
   <title>Rütmiharjutuste generaator (beeta)</title>
   <style>
-    body {
-      font-family: sans-serif;
-      max-width: 700px;
-      margin: 40px auto;
-    }
-    button {
-      font-size: 1em;
-      padding: 8px 16px;
-    }
-    .exercise {
-      margin-top: 20px;
-      font-size: 1.2em;
-      background: #f5f5f5;
-      padding: 12px;
-    }
+    body { font-family: sans-serif; max-width: 800px; margin: 40px auto; }
+    button { font-size: 1em; padding: 8px 16px; }
+    #staff { margin-top: 18px; background: #f7f7f7; padding: 12px; border-radius: 8px; }
+    .hint { margin-top: 40px; font-size: 0.9em; }
   </style>
 </head>
 <body>
@@ -30,37 +19,60 @@
     Sobib plaksutamiseks ja lugemiseks.
   </p>
 
-  <button onclick="generateExercise()">Genereeri rütm</button>
+  <button id="btn">Genereeri rütm (noodina)</button>
 
-  <div id="exercise" class="exercise"></div>
+  <div id="staff"></div>
 
-  <p style="margin-top: 40px; font-size: 0.9em;">
-    ⚠️ Tegemist on beetaversiooniga. Palun jaga tagasisidet.
-  </p>
+  <p class="hint">⚠️ Tegemist on beetaversiooniga. Palun jaga tagasisidet.</p>
+
+  <!-- VexFlow (noodikirja joonistamine) -->
+  <script src="https://unpkg.com/vexflow@5.0.0/build/cjs/vexflow.js"></script>
 
   <script>
-    function generateExercise() {
-      const patterns = [
-        ["ta", "ta", "ti-ti", "ta"],
-        ["ta", "ti-ti", "ta", "ta"],
-        ["ti-ti", "ta", "ta", "ta"],
-        ["ta", "ta", "ta", "ta"]
-      ];
+    const VF = Vex.Flow;
 
-      function randomBar() {
-        return patterns[Math.floor(Math.random() * patterns.length)];
+    // Meie "rütmisõnad" -> noodivältused
+    // Kasutame kõiki noote samal kõrgusel (C5), sest harjutus on rütmi jaoks.
+    // Hiljem saab lisada erinevad kõrgused, pausid, taktimõõdud jne.
+    const patterns = [
+      ["q", "q", "8-8", "q"], // ta ta ti-ti ta
+      ["q", "8-8", "q", "q"],
+      ["8-8", "q", "q", "q"],
+      ["q", "q", "q", "q"]
+    ];
+
+    function randomBar() {
+      return patterns[Math.floor(Math.random() * patterns.length)];
+    }
+
+    function barToVexNotes(bar) {
+      const notes = [];
+      for (const token of bar) {
+        if (token === "q") {
+          notes.push(new VF.StaveNote({ keys: ["c/5"], duration: "q" }));
+        } else if (token === "8-8") {
+          // kaks kaheksandikku, mis on kokku 1 löök
+          const n1 = new VF.StaveNote({ keys: ["c/5"], duration: "8" });
+          const n2 = new VF.StaveNote({ keys: ["c/5"], duration: "8" });
+          notes.push(n1, n2);
+        }
       }
 
-      const bar1 = randomBar();
-      const bar2 = randomBar();
+      // Kui bar sisaldab kaheksandikke, siis tuleb need omavahel "beami" alla siduda (ilusam lugeda).
+      // Leiame kõik kaheksandikud ja teeme beamid paaridesse.
+      const beams = [];
+      for (let i = 0; i < notes.length - 1; i++) {
+        if (notes[i].getDuration() === "8" && notes[i+1].getDuration() === "8") {
+          beams.push(new VF.Beam([notes[i], notes[i+1]]));
+          i++; // hüppa paarist üle
+        }
+      }
 
-      const result =
-        "| " + bar1.join("  ") + " |<br>" +
-        "| " + bar2.join("  ") + " |";
-
-      document.getElementById("exercise").innerHTML = result;
+      return { notes, beams };
     }
-  </script>
 
-</body>
-</html>
+    function renderTwoBars(bar1, bar2) {
+      const staffDiv = document.getElementById("staff");
+      staffDiv.innerHTML = ""; // puhasta eelmine
+
+      // SVG renderer (terav
