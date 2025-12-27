@@ -6,73 +6,80 @@
   <style>
     body { font-family: sans-serif; max-width: 800px; margin: 40px auto; }
     button { font-size: 1em; padding: 8px 16px; }
-    #staff { margin-top: 18px; background: #f7f7f7; padding: 12px; border-radius: 8px; }
-    .hint { margin-top: 40px; font-size: 0.9em; }
+    #paper { margin-top: 18px; background: #f7f7f7; padding: 12px; border-radius: 8px; }
+    .small { margin-top: 40px; font-size: 0.9em; }
+    code { background: #eee; padding: 2px 6px; border-radius: 6px; }
   </style>
 </head>
 <body>
 
   <h1>Rütmiharjutuste generaator (beeta)</h1>
+  <p>Genereeri lihtne rütmiharjutus algklassidele (rütm noodina).</p>
 
-  <p>
-    Genereeri lihtne rütmiharjutus algklassidele.
-    Sobib plaksutamiseks ja lugemiseks.
-  </p>
+  <button id="btn">Genereeri rütm</button>
 
-  <button id="btn">Genereeri rütm (noodina)</button>
+  <div id="paper"></div>
 
-  <div id="staff"></div>
+  <p class="small">⚠️ Beetaversioon. Kui midagi ei tööta, proovi lehte värskendada.</p>
+  <p class="small">Debug: <code id="abcText"></code></p>
 
-  <p class="hint">⚠️ Tegemist on beetaversiooniga. Palun jaga tagasisidet.</p>
-
-  <!-- VexFlow (noodikirja joonistamine) -->
-  <script src="https://unpkg.com/vexflow@5.0.0/build/cjs/vexflow.js"></script>
+  <!-- ABCJS -->
+  <script src="https://cdn.jsdelivr.net/npm/abcjs@6.2.3/dist/abcjs-basic-min.js"></script>
 
   <script>
-    const VF = Vex.Flow;
-
-    // Meie "rütmisõnad" -> noodivältused
-    // Kasutame kõiki noote samal kõrgusel (C5), sest harjutus on rütmi jaoks.
-    // Hiljem saab lisada erinevad kõrgused, pausid, taktimõõdud jne.
-    const patterns = [
-      ["q", "q", "8-8", "q"], // ta ta ti-ti ta
-      ["q", "8-8", "q", "q"],
-      ["8-8", "q", "q", "q"],
-      ["q", "q", "q", "q"]
+    // ABC seadistus:
+    // L:1/8 tähendab: "üks ühik = kaheksandik"
+    // siis veerand = 2 ühikut, pool = 4 ühikut.
+    // Kasutame ühte kõrgust (c), sest see on rütmiharjutus.
+    const barPatterns = [
+      ["q","q","8-8","q"],
+      ["q","8-8","q","q"],
+      ["8-8","q","q","q"],
+      ["q","q","q","q"]
     ];
 
     function randomBar() {
-      return patterns[Math.floor(Math.random() * patterns.length)];
+      return barPatterns[Math.floor(Math.random() * barPatterns.length)];
     }
 
-    function barToVexNotes(bar) {
-      const notes = [];
-      for (const token of bar) {
-        if (token === "q") {
-          notes.push(new VF.StaveNote({ keys: ["c/5"], duration: "q" }));
-        } else if (token === "8-8") {
-          // kaks kaheksandikku, mis on kokku 1 löök
-          const n1 = new VF.StaveNote({ keys: ["c/5"], duration: "8" });
-          const n2 = new VF.StaveNote({ keys: ["c/5"], duration: "8" });
-          notes.push(n1, n2);
-        }
+    function barToABC(bar) {
+      // q = veerand = c2 (kuna L:1/8)
+      // 8-8 = kaks kaheksandikku = cc
+      let s = "";
+      for (const t of bar) {
+        if (t === "q") s += "c2 ";
+        if (t === "8-8") s += "c c ";
       }
-
-      // Kui bar sisaldab kaheksandikke, siis tuleb need omavahel "beami" alla siduda (ilusam lugeda).
-      // Leiame kõik kaheksandikud ja teeme beamid paaridesse.
-      const beams = [];
-      for (let i = 0; i < notes.length - 1; i++) {
-        if (notes[i].getDuration() === "8" && notes[i+1].getDuration() === "8") {
-          beams.push(new VF.Beam([notes[i], notes[i+1]]));
-          i++; // hüppa paarist üle
-        }
-      }
-
-      return { notes, beams };
+      return s.trim();
     }
 
-    function renderTwoBars(bar1, bar2) {
-      const staffDiv = document.getElementById("staff");
-      staffDiv.innerHTML = ""; // puhasta eelmine
+    function generateABC() {
+      const bar1 = randomBar();
+      const bar2 = randomBar();
 
-      // SVG renderer (terav
+      const abc =
+`X:1
+T:Rütmiharjutus
+M:4/4
+L:1/8
+K:C
+| ${barToABC(bar1)} | ${barToABC(bar2)} |`;
+
+      return abc;
+    }
+
+    function render() {
+      const abc = generateABC();
+      document.getElementById("abcText").textContent = abc.replace(/\n/g, " ");
+      document.getElementById("paper").innerHTML = "";
+      ABCJS.renderAbc("paper", abc, {
+        responsive: "resize"
+      });
+    }
+
+    document.getElementById("btn").addEventListener("click", render);
+    render();
+  </script>
+
+</body>
+</html>
