@@ -18,7 +18,7 @@
 <body>
 
   <h1>Rütmiharjutuste generaator (beeta)</h1>
-  <p>Genereeri lihtne rütmiharjutus algklassidele (rütmipaber: taktimõõt + taktijooned + rütm).</p>
+  <p>Genereeri lihtne rütmiharjutus algklassidele.</p>
 
   <div class="row">
     <button id="btn">Genereeri rütm</button>
@@ -35,9 +35,9 @@
   <script src="https://cdn.jsdelivr.net/npm/abcjs@6.2.3/dist/abcjs-basic-min.js"></script>
 
   <script>
-    // Mustrite "ehituskivid":
+    // Rütmimustrid:
     // q     = veerand
-    // 8-8   = kaks kaheksandikku (ti-ti) — renderdame ABC-s "cc" (ilma vaheta), et tuleks üks tala
+    // 8-8   = kaks kaheksandikku (ti-ti)
     const barPatterns = [
       ["q","q","8-8","q"],
       ["q","8-8","q","q"],
@@ -50,9 +50,9 @@
       return barPatterns[Math.floor(Math.random() * barPatterns.length)];
     }
 
-    // ABC: kasutame L:1/8, seega:
+    // ABC: L:1/8
     // veerand = c2
-    // kaks kaheksandikku = cc (ilma vaheta) -> automaatselt beamitakse kokku
+    // ti-ti = cc (koos, et tuleks üks tala)
     function barToABC(bar) {
       let s = "";
       for (const t of bar) {
@@ -66,13 +66,10 @@
       const b1 = randomBar();
       const b2 = randomBar();
 
-      // NB: rida EI alga "|" märgiga -> taktijoon ei tule kohe pärast taktimõõtu
-      // clef=none -> võtme ära
-      // stafflines=1 -> üks rida (rütmipaber). Kui tahad null joont, proovi stafflines=0.
       return `X:1
 M:4/4
 L:1/8
-K:none clef=none stafflines=1
+K:none clef=none stafflines=0 stem=up
 ${barToABC(b1)} | ${barToABC(b2)} |`;
     }
 
@@ -80,24 +77,14 @@ ${barToABC(b1)} | ${barToABC(b2)} |`;
       const abc = generateABC();
       document.getElementById("paper").innerHTML = "";
 
-      if (typeof ABCJS === "undefined") {
-        document.getElementById("paper").innerHTML =
-          "<strong>Viga:</strong> ABCJS ei laadinud. Proovi teises brauseris või tee hard refresh.";
-        return;
-      }
-
       ABCJS.renderAbc("paper", abc, {
         responsive: "resize",
-        // lihtne, “töölehe” stiil
         staffwidth: 760
       });
-
-      // Kui tahad debug'ida, võta kommentaar maha:
-      // console.log(abc);
     }
 
     document.getElementById("btn").addEventListener("click", render);
-    render(); // näita kohe üks harjutus
+    render();
   </script>
 
 </body>
