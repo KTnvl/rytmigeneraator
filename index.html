@@ -3,39 +3,41 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>ABCJS test (beeta)</title>
+  <title>Rütmiharjutuste generaator (beeta)</title>
   <style>
     body { font-family: sans-serif; max-width: 900px; margin: 30px auto; padding: 0 12px; }
-    button { font-size: 1em; padding: 10px 16px; }
-    #status { padding: 10px 12px; background: #f2f2f2; border-radius: 10px; margin: 12px 0; }
-    #paper { margin-top: 14px; background: #fafafa; border: 1px solid #ddd; padding: 12px; border-radius: 10px; }
-    .small { font-size: 0.9em; opacity: 0.9; }
-    code { background: #eee; padding: 2px 6px; border-radius: 6px; }
+    h1 { margin-bottom: 6px; }
+    p { margin-top: 6px; }
+    button { font-size: 1em; padding: 10px 16px; cursor: pointer; }
+    #paper { margin-top: 16px; background: #fafafa; border: 1px solid #ddd; padding: 14px; border-radius: 10px; overflow-x: auto; }
+    .small { margin-top: 26px; font-size: 0.95em; opacity: 0.9; }
+    .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .pill { font-size: 0.9em; background: #eee; padding: 4px 10px; border-radius: 999px; }
   </style>
 </head>
 <body>
 
-  <h1>ABCJS test (beeta)</h1>
+  <h1>Rütmiharjutuste generaator (beeta)</h1>
+  <p>Genereeri lihtne rütmiharjutus algklassidele (rütmipaber: taktimõõt + taktijooned + rütm).</p>
 
-  <div id="status">
-    <div><strong>LEHT LAETUD ✅</strong></div>
-    <div id="abcjsStatus">ABCJS: kontrollin…</div>
-    <div class="small">Build stamp: <code id="stamp"></code></div>
+  <div class="row">
+    <button id="btn">Genereeri rütm</button>
+    <span class="pill">4/4</span>
+    <span class="pill">ta = veerand</span>
+    <span class="pill">ti-ti = kaks kaheksandikku</span>
   </div>
-
-  <button id="btn">Genereeri rütm</button>
 
   <div id="paper"></div>
 
-  <p class="small">Kui nupp ei tee midagi: tee hard refresh (Ctrl+Shift+R) ja vaata, kas “Build stamp” muutub.</p>
+  <p class="small">⚠️ Beetaversioon. Kui midagi ei tööta, proovi lehte värskendada (Ctrl+Shift+R / Cmd+Shift+R).</p>
 
   <!-- ABCJS -->
   <script src="https://cdn.jsdelivr.net/npm/abcjs@6.2.3/dist/abcjs-basic-min.js"></script>
 
   <script>
-    // "Build stamp" aitab näha, kas GitHub Pages näitab vana versiooni
-    document.getElementById("stamp").textContent = new Date().toISOString();
-
+    // Mustrite "ehituskivid":
+    // q     = veerand
+    // 8-8   = kaks kaheksandikku (ti-ti) — renderdame ABC-s "cc" (ilma vaheta), et tuleks üks tala
     const barPatterns = [
       ["q","q","8-8","q"],
       ["q","8-8","q","q"],
@@ -48,12 +50,14 @@
       return barPatterns[Math.floor(Math.random() * barPatterns.length)];
     }
 
-    // ABC: L:1/8 => veerand = 2, kaheksandik = 1
+    // ABC: kasutame L:1/8, seega:
+    // veerand = c2
+    // kaks kaheksandikku = cc (ilma vaheta) -> automaatselt beamitakse kokku
     function barToABC(bar) {
       let s = "";
       for (const t of bar) {
         if (t === "q") s += "c2 ";
-        if (t === "8-8") s += "c c ";
+        if (t === "8-8") s += "cc ";
       }
       return s.trim();
     }
@@ -61,35 +65,39 @@
     function generateABC() {
       const b1 = randomBar();
       const b2 = randomBar();
+
+      // NB: rida EI alga "|" märgiga -> taktijoon ei tule kohe pärast taktimõõtu
+      // clef=none -> võtme ära
+      // stafflines=1 -> üks rida (rütmipaber). Kui tahad null joont, proovi stafflines=0.
       return `X:1
-T:Rütmiharjutus
 M:4/4
 L:1/8
-K:C
-| ${barToABC(b1)} | ${barToABC(b2)} |`;
+K:none clef=none stafflines=1
+${barToABC(b1)} | ${barToABC(b2)} |`;
     }
 
     function render() {
-      const paper = document.getElementById("paper");
-      paper.innerHTML = "";
-
       const abc = generateABC();
+      document.getElementById("paper").innerHTML = "";
 
-      // selge indikaator, kas ABCJS on laetud
       if (typeof ABCJS === "undefined") {
-        document.getElementById("abcjsStatus").textContent = "ABCJS: EI laadinud ❌ (CDN blokeeritud või cache/serving issue)";
-        paper.innerHTML = "<strong>Viga:</strong> ABCJS puudub. Proovi teises brauseris või hard refresh.";
+        document.getElementById("paper").innerHTML =
+          "<strong>Viga:</strong> ABCJS ei laadinud. Proovi teises brauseris või tee hard refresh.";
         return;
-      } else {
-        document.getElementById("abcjsStatus").textContent = "ABCJS: laetud ✅";
       }
 
-      // render
-      ABCJS.renderAbc("paper", abc, { responsive: "resize" });
+      ABCJS.renderAbc("paper", abc, {
+        responsive: "resize",
+        // lihtne, “töölehe” stiil
+        staffwidth: 760
+      });
+
+      // Kui tahad debug'ida, võta kommentaar maha:
+      // console.log(abc);
     }
 
     document.getElementById("btn").addEventListener("click", render);
-    render();
+    render(); // näita kohe üks harjutus
   </script>
 
 </body>
