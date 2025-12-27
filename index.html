@@ -46,8 +46,8 @@
     function barToABC(bar) {
       let s = "";
       for (const t of bar) {
-        if (t === "q") s += "f2 ";
-        if (t === "8-8") s += "ff ";
+        if (t === "q") s += "C2 ";
+        if (t === "8-8") s += "CC ";
       }
       return s.trim();
     }
@@ -58,9 +58,8 @@
       return `X:1
 M:4/4
 L:1/8
-V:1 clef=none stafflines=0
-K:none
-[V:1] ${barToABC(b1)} | ${barToABC(b2)} |]`;
+K:C clef=perc
+${barToABC(b1)} | ${barToABC(b2)} |]`;
     }
     
     function render() {
