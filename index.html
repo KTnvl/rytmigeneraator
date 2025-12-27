@@ -52,12 +52,12 @@
 
     // ABC: L:1/8
     // veerand = d1
-    // ti-ti = cc (koos, et tuleks üks tala)
+    // ti-ti = dd (koos, et tuleks üks tala)
     function barToABC(bar) {
       let s = "";
       for (const t of bar) {
-        if (t === "q") s += "c2 ";
-        if (t === "8-8") s += "cc ";
+        if (t === "q") s += "d1 ";
+        if (t === "8-8") s += "dd ";
       }
       return s.trim();
     }
