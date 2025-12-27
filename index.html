@@ -9,73 +9,173 @@
     h1 { margin-bottom: 6px; }
     p { margin-top: 6px; }
     button { font-size: 1em; padding: 10px 16px; cursor: pointer; }
-    #paper { margin-top: 16px; background: 
-#fafafa; border: 1px solid #ddd; padding: 14px; border-radius: 10px; overflow-x: auto; }
     .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
     .pill { font-size: 0.9em; background: #eee; padding: 4px 10px; border-radius: 999px; }
+    #paper { margin-top: 16px; background: #fafafa; border: 1px solid #ddd; padding: 14px; border-radius: 10px; overflow-x: auto; }
     .small { margin-top: 26px; font-size: 0.95em; opacity: 0.9; }
   </style>
 </head>
 <body>
+
   <h1>Rütmiharjutuste generaator (beeta)</h1>
   <p>Genereeri lihtne rütmiharjutus algklassidele.</p>
+
   <div class="row">
     <button id="btn">Genereeri rütm</button>
     <span class="pill">4/4</span>
     <span class="pill">ta = veerand</span>
     <span class="pill">ti-ti = kaks kaheksandikku</span>
   </div>
+
   <div id="paper"></div>
-  <p class="small">
-    ⚠️ Beetaversioon. Kui midagi ei tööta, proovi lehte värskendada (Ctrl+Shift+R / Cmd+Shift+R).
-  </p>
-  <!-- ABCJS -->
-  <script src="https://cdn.jsdelivr.net/npm/abcjs@6.2.3/dist/abcjs-basic-min.js"></script>
+
+  <p class="small">⚠️ Beetaversioon. Kui midagi ei tööta, proovi lehte värskendada (Ctrl+Shift+R / Cmd+Shift+R).</p>
+
   <script>
-    // q   = veerand
-    // 8-8 = kaks kaheksandikku (ti-ti)
+    // Tokens:
+    // q = veerand
+    // ee = kaks kaheksandikku (ti-ti)
     const barPatterns = [
-      ["q","q","8-8","q"],
-      ["q","8-8","q","q"],
-      ["8-8","q","q","q"],
+      ["q","q","ee","q"],
+      ["q","ee","q","q"],
+      ["ee","q","q","q"],
       ["q","q","q","q"],
-      ["8-8","8-8","q","q"]
+      ["ee","ee","q","q"]
     ];
+
     function randomBar() {
       return barPatterns[Math.floor(Math.random() * barPatterns.length)];
     }
-    // ABC: L:1/8
-    // NB! Kasutame SUURTÄHTE "C" (madalam register) -> varred lähevad loomulikumalt üles.
-    // veerand = C2
-    // ti-ti = CC (ilma vaheta) -> ühe talaga
-    function barToABC(bar) {
-      let s = "";
-      for (const t of bar) {
-        if (t === "q") s += "C2 ";
-        if (t === "8-8") s += "CC ";
+
+    function generateExercise() {
+      return [randomBar(), randomBar()]; // 2 takti
+    }
+
+    function svgEl(tag, attrs = {}) {
+      const el = document.createElementNS("http://www.w3.org/2000/svg", tag);
+      for (const [k,v] of Object.entries(attrs)) el.setAttribute(k, String(v));
+      return el;
+    }
+
+    function drawNotehead(svg, cx, cy) {
+      // Ovaalne, veidi viltu noodipea (palju “pärisem” kui ring)
+      const e = svgEl("ellipse", { cx, cy, rx: 7.5, ry: 5.5, fill: "#111" });
+      e.setAttribute("transform", `rotate(-20 ${cx} ${cy})`);
+      svg.appendChild(e);
+    }
+
+    function drawStemUp(svg, xRightOfHead, headY, stemH) {
+      // Vars üles (x on noodipea parem serv)
+      svg.appendChild(svgEl("rect", {
+        x: xRightOfHead,
+        y: headY - stemH,
+        width: 2,
+        height: stemH,
+        fill: "#111"
+      }));
+    }
+
+    function renderSVG(bars) {
+      const container = document.getElementById("paper");
+      container.innerHTML = "";
+
+      // Layout
+      const W = 820;
+      const H = 140;
+
+      const timeSigX = 24;
+      const marginLeft = 90;   // jätame ruumi 4/4 jaoks
+      const topY = 35;
+      const bottomY = 105;
+
+      const noteY = 70;
+      const stemH = 36;
+
+      const measureW = 300;    // natuke kompaktsem kui enne
+      const gap = 40;
+
+      const svg = svgEl("svg", { width: W, height: H, viewBox: `0 0 ${W} ${H}` });
+      container.appendChild(svg);
+
+      // Taktimõõt 4/4 (tekstina)
+      const tsTop = svgEl("text", { x: timeSigX, y: 66, "font-size": 30, "font-family": "serif" });
+      tsTop.textContent = "4";
+      const tsBottom = svgEl("text", { x: timeSigX, y: 94, "font-size": 30, "font-family": "serif" });
+      tsBottom.textContent = "4";
+      svg.appendChild(tsTop);
+      svg.appendChild(tsBottom);
+
+      function drawBarline(x, isFinal = false) {
+        // tavaline taktijoon
+        svg.appendChild(svgEl("line", { x1: x, y1: topY, x2: x, y2: bottomY, stroke: "#111", "stroke-width": 2 }));
+        // lõpujoon: topeltjoon lõpus
+        if (isFinal) {
+          svg.appendChild(svgEl("line", { x1: x - 6, y1: topY, x2: x - 6, y2: bottomY, stroke: "#111", "stroke-width": 2 }));
+        }
       }
-      return s.trim();
+
+      function drawMeasure(i, tokens) {
+        const x0 = marginLeft + i * (measureW + gap);
+        const x1 = x0 + measureW;
+
+        // ⚠️ oluline fix: ära joonista keskele topeltjoont
+        // - me joonistame ainult "algusjoone" taktile i>0
+        // - ja lõpujoone ainult viimasele taktile
+        if (i > 0) drawBarline(x0, false);
+
+        const isLast = (i === bars.length - 1);
+        if (isLast) drawBarline(x1, true);
+
+        // 4 lööki = 4 sloti
+        const slotW = measureW / 4;
+
+        for (let beat = 0; beat < 4; beat++) {
+          const token = tokens[beat];
+          const cx = x0 + slotW * beat + slotW / 2;
+
+          if (token === "q") {
+            drawNotehead(svg, cx, noteY);
+            // vars üles: noodipea parem serva kanti
+            drawStemUp(svg, cx + 6, noteY, stemH);
+          } else if (token === "ee") {
+            // kaks kaheksandikku: kaks pead
+            const dx = 18;
+            const cx1 = cx - dx/2;
+            const cx2 = cx + dx/2;
+
+            drawNotehead(svg, cx1, noteY);
+            drawNotehead(svg, cx2, noteY);
+
+            // varred üles
+            drawStemUp(svg, cx1 + 6, noteY, stemH);
+            drawStemUp(svg, cx2 + 6, noteY, stemH);
+
+            // tala (beam) varte ülaosas
+            const beamY = noteY - stemH;
+            const beamX1 = cx1 + 6;         // 1. varre x
+            const beamX2 = cx2 + 6 + 2;     // 2. varre x + varre laius
+            svg.appendChild(svgEl("rect", {
+              x: beamX1,
+              y: beamY,
+              width: (beamX2 - beamX1),
+              height: 6,
+              fill: "#111"
+            }));
+          }
+        }
+      }
+
+      for (let i = 0; i < bars.length; i++) drawMeasure(i, bars[i]);
     }
-    function generateABC() {
-      const b1 = randomBar();
-      const b2 = randomBar();
-      return X:1
-M:4/4
-L:1/8
-V:1 stem=up clef=none stafflines=0
-K:none
-[V:1] ${barToABC(b1)} | ${barToABC(b2)} |];
+
+    function generateAndRender() {
+      const bars = generateExercise();
+      renderSVG(bars);
     }
-    function render() {
-      const abc = generateABC();
-      document.getElementById("paper").innerHTML = "";
-      ABCJS.renderAbc("paper", abc, {
-        responsive: "resize",
-        staffwidth: 760
-      });
-    }
-    document.getElementById("btn").addEventListener("click", render);
-    render();
+
+    document.getElementById("btn").addEventListener("click", generateAndRender);
+    generateAndRender();
   </script>
+
 </body>
 </html>
