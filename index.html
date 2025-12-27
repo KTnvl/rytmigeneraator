@@ -9,161 +9,73 @@
     h1 { margin-bottom: 6px; }
     p { margin-top: 6px; }
     button { font-size: 1em; padding: 10px 16px; cursor: pointer; }
+    #paper { margin-top: 16px; background: 
+#fafafa; border: 1px solid #ddd; padding: 14px; border-radius: 10px; overflow-x: auto; }
     .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
     .pill { font-size: 0.9em; background: #eee; padding: 4px 10px; border-radius: 999px; }
-    #paper { margin-top: 16px; background: #fafafa; border: 1px solid #ddd; padding: 14px; border-radius: 10px; overflow-x: auto; }
     .small { margin-top: 26px; font-size: 0.95em; opacity: 0.9; }
   </style>
 </head>
 <body>
-
   <h1>Rütmiharjutuste generaator (beeta)</h1>
   <p>Genereeri lihtne rütmiharjutus algklassidele.</p>
-
   <div class="row">
     <button id="btn">Genereeri rütm</button>
     <span class="pill">4/4</span>
     <span class="pill">ta = veerand</span>
     <span class="pill">ti-ti = kaks kaheksandikku</span>
   </div>
-
   <div id="paper"></div>
-
-  <p class="small">⚠️ Beetaversioon. Kui midagi ei tööta, proovi lehte värskendada (Ctrl+Shift+R / Cmd+Shift+R).</p>
-
+  <p class="small">
+    ⚠️ Beetaversioon. Kui midagi ei tööta, proovi lehte värskendada (Ctrl+Shift+R / Cmd+Shift+R).
+  </p>
+  <!-- ABCJS -->
+  <script src="https://cdn.jsdelivr.net/npm/abcjs@6.2.3/dist/abcjs-basic-min.js"></script>
   <script>
-    // Tokens:
-    // q = veerand
-    // ee = kaks kaheksandikku (ti-ti)
+    // q   = veerand
+    // 8-8 = kaks kaheksandikku (ti-ti)
     const barPatterns = [
-      ["q","q","ee","q"],
-      ["q","ee","q","q"],
-      ["ee","q","q","q"],
+      ["q","q","8-8","q"],
+      ["q","8-8","q","q"],
+      ["8-8","q","q","q"],
       ["q","q","q","q"],
-      ["ee","ee","q","q"]
+      ["8-8","8-8","q","q"]
     ];
-
     function randomBar() {
       return barPatterns[Math.floor(Math.random() * barPatterns.length)];
     }
-
-    function generateExercise() {
-      return [randomBar(), randomBar()]; // 2 takti
-    }
-
-    function svgEl(tag, attrs = {}) {
-      const el = document.createElementNS("http://www.w3.org/2000/svg", tag);
-      for (const [k,v] of Object.entries(attrs)) el.setAttribute(k, String(v));
-      return el;
-    }
-
-    function renderSVG(bars) {
-      const container = document.getElementById("paper");
-      container.innerHTML = "";
-
-      // Layout
-      const W = 820;
-      const H = 140;
-      const marginLeft = 60;
-      const marginTop = 20;
-      const baselineY = 70;          // “rütmijoon” (kujunduslik, aga võid 100% ära võtta)
-      const noteHeadR = 7;
-      const stemH = 34;
-      const stemW = 2;
-      const beamH = 6;
-
-      // 2 takti ala
-      const measureW = 340;
-      const gap = 40;
-
-      const svg = svgEl("svg", { width: W, height: H, viewBox: `0 0 ${W} ${H}` });
-      container.appendChild(svg);
-
-      // (Valikuline) üks õrn “rütmijoon” — kui päriselt ei taha, kommenteeri välja
-      // svg.appendChild(svgEl("line", { x1: marginLeft, y1: baselineY, x2: W-20, y2: baselineY, stroke: "#222", "stroke-width": 1 }));
-
-      // Taktimõõt 4/4 (ainult tekstina, sest me ei taha noodivõtmeid/jooni)
-      const tsTop = svgEl("text", { x: 18, y: 60, "font-size": 28, "font-family": "serif" });
-      tsTop.textContent = "4";
-      const tsBottom = svgEl("text", { x: 18, y: 88, "font-size": 28, "font-family": "serif" });
-      tsBottom.textContent = "4";
-      svg.appendChild(tsTop);
-      svg.appendChild(tsBottom);
-
-      // Helper: joonista üks takt
-      function drawMeasure(measureIndex, tokens) {
-        const x0 = marginLeft + measureIndex * (measureW + gap);
-        const x1 = x0 + measureW;
-
-        // Algus-taktijoon (aga mitte kohe pärast taktimõõtu — seega esimese takti alguses ei joonista)
-        if (measureIndex > 0) {
-          svg.appendChild(svgEl("line", { x1: x0, y1: 35, x2: x0, y2: 105, stroke: "#111", "stroke-width": 2 }));
-        }
-
-        // Lõpp-taktijoon (tavaline)
-        svg.appendChild(svgEl("line", { x1: x1, y1: 35, x2: x1, y2: 105, stroke: "#111", "stroke-width": 2 }));
-
-        // Viimane takt: topelt lõpujoon (lisa veel üks joon natuke vasemale)
-        if (measureIndex === bars.length - 1) {
-          svg.appendChild(svgEl("line", { x1: x1 - 6, y1: 35, x2: x1 - 6, y2: 105, stroke: "#111", "stroke-width": 2 }));
-        }
-
-        // 4 lööki = 4 “slots”
-        // Iga sloti keskel joonistame veerandi või kaheksandike paari
-        const beatCount = 4;
-        const slotW = measureW / beatCount;
-
-        // Y positsioon noodipeale (kõik samal kõrgusel)
-        const headY = 62;
-
-        for (let beat = 0; beat < beatCount; beat++) {
-          const token = tokens[beat]; // me eeldame, et tokenite arv = 4 (q või ee)
-          const cx = x0 + slotW * beat + slotW / 2;
-
-          if (token === "q") {
-            // Noodipea
-            svg.appendChild(svgEl("circle", { cx, cy: headY, r: noteHeadR, fill: "#111" }));
-            // Vars üles
-            svg.appendChild(svgEl("rect", { x: cx + noteHeadR - 1, y: headY - stemH, width: stemW, height: stemH, fill: "#111" }));
-          } else if (token === "ee") {
-            // Kaks kaheksandikku: kaks pead veidi lahus
-            const dx = 16;
-            const cx1 = cx - dx/2;
-            const cx2 = cx + dx/2;
-
-            svg.appendChild(svgEl("circle", { cx: cx1, cy: headY, r: noteHeadR, fill: "#111" }));
-            svg.appendChild(svgEl("circle", { cx: cx2, cy: headY, r: noteHeadR, fill: "#111" }));
-
-            // Varred üles mõlemale
-            svg.appendChild(svgEl("rect", { x: cx1 + noteHeadR - 1, y: headY - stemH, width: stemW, height: stemH, fill: "#111" }));
-            svg.appendChild(svgEl("rect", { x: cx2 + noteHeadR - 1, y: headY - stemH, width: stemW, height: stemH, fill: "#111" }));
-
-            // Tala (beam) varte ülaosas
-            const beamY = headY - stemH;
-            svg.appendChild(svgEl("rect", {
-              x: (cx1 + noteHeadR - 1),
-              y: beamY,
-              width: (cx2 - cx1),
-              height: beamH,
-              fill: "#111"
-            }));
-          }
-        }
+    // ABC: L:1/8
+    // NB! Kasutame SUURTÄHTE "C" (madalam register) -> varred lähevad loomulikumalt üles.
+    // veerand = C2
+    // ti-ti = CC (ilma vaheta) -> ühe talaga
+    function barToABC(bar) {
+      let s = "";
+      for (const t of bar) {
+        if (t === "q") s += "C2 ";
+        if (t === "8-8") s += "CC ";
       }
-
-      // Meie tokenite kuju: 4 positsiooni taktis (q või ee)
-      // Kui barPatterns sees on "q" ja "ee", olemegi valmis.
-      for (let i = 0; i < bars.length; i++) drawMeasure(i, bars[i]);
+      return s.trim();
     }
-
-    function generateAndRender() {
-      const bars = generateExercise();
-      renderSVG(bars);
+    function generateABC() {
+      const b1 = randomBar();
+      const b2 = randomBar();
+      return X:1
+M:4/4
+L:1/8
+V:1 stem=up clef=none stafflines=0
+K:none
+[V:1] ${barToABC(b1)} | ${barToABC(b2)} |];
     }
-
-    document.getElementById("btn").addEventListener("click", generateAndRender);
-    generateAndRender();
+    function render() {
+      const abc = generateABC();
+      document.getElementById("paper").innerHTML = "";
+      ABCJS.renderAbc("paper", abc, {
+        responsive: "resize",
+        staffwidth: 760
+      });
+    }
+    document.getElementById("btn").addEventListener("click", render);
+    render();
   </script>
-
 </body>
 </html>
