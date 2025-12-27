@@ -3,21 +3,64 @@
 <head>
   <meta charset="UTF-8" />
   <title>Rütmiharjutuste generaator (beeta)</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      max-width: 700px;
+      margin: 40px auto;
+    }
+    button {
+      font-size: 1em;
+      padding: 8px 16px;
+    }
+    .exercise {
+      margin-top: 20px;
+      font-size: 1.2em;
+      background: #f5f5f5;
+      padding: 12px;
+    }
+  </style>
 </head>
 <body>
+
   <h1>Rütmiharjutuste generaator (beeta)</h1>
 
   <p>
-    See on eestikeelne rütmiharjutuste generaatori beetaversioon
-    algklasside muusikaõpetajatele.
+    Genereeri lihtne rütmiharjutus algklassidele.
+    Sobib plaksutamiseks ja lugemiseks.
   </p>
 
-  <button>
-    Genereeri (varsti)
-  </button>
+  <button onclick="generateExercise()">Genereeri rütm</button>
+
+  <div id="exercise" class="exercise"></div>
 
   <p style="margin-top: 40px; font-size: 0.9em;">
     ⚠️ Tegemist on beetaversiooniga. Palun jaga tagasisidet.
   </p>
+
+  <script>
+    function generateExercise() {
+      const patterns = [
+        ["ta", "ta", "ti-ti", "ta"],
+        ["ta", "ti-ti", "ta", "ta"],
+        ["ti-ti", "ta", "ta", "ta"],
+        ["ta", "ta", "ta", "ta"]
+      ];
+
+      function randomBar() {
+        return patterns[Math.floor(Math.random() * patterns.length)];
+      }
+
+      const bar1 = randomBar();
+      const bar2 = randomBar();
+
+      const result =
+        "| " + bar1.join("  ") + " |<br>" +
+        "| " + bar2.join("  ") + " |";
+
+      document.getElementById("exercise").innerHTML = result;
+    }
+  </script>
+
 </body>
 </html>
