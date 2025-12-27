@@ -4,15 +4,46 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>Rütmiharjutuste generaator (beeta)</title>
+
   <style>
-    body { font-family: sans-serif; max-width: 900px; margin: 30px auto; padding: 0 12px; }
+    body {
+      font-family: sans-serif;
+      max-width: 900px;
+      margin: 30px auto;
+      padding: 0 12px;
+    }
     h1 { margin-bottom: 6px; }
     p { margin-top: 6px; }
-    button { font-size: 1em; padding: 10px 16px; cursor: pointer; }
-    #paper { margin-top: 16px; background: #fafafa; border: 1px solid #ddd; padding: 14px; border-radius: 10px; overflow-x: auto; }
-    .small { margin-top: 26px; font-size: 0.95em; opacity: 0.9; }
-    .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-    .pill { font-size: 0.9em; background: #eee; padding: 4px 10px; border-radius: 999px; }
+    button {
+      font-size: 1em;
+      padding: 10px 16px;
+      cursor: pointer;
+    }
+    #paper {
+      margin-top: 16px;
+      background: #fafafa;
+      border: 1px solid #ddd;
+      padding: 14px;
+      border-radius: 10px;
+      overflow-x: auto;
+    }
+    .row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .pill {
+      font-size: 0.9em;
+      background: #eee;
+      padding: 4px 10px;
+      border-radius: 999px;
+    }
+    .small {
+      margin-top: 26px;
+      font-size: 0.95em;
+      opacity: 0.9;
+    }
   </style>
 </head>
 <body>
@@ -29,15 +60,18 @@
 
   <div id="paper"></div>
 
-  <p class="small">⚠️ Beetaversioon. Kui midagi ei tööta, proovi lehte värskendada (Ctrl+Shift+R / Cmd+Shift+R).</p>
+  <p class="small">
+    ⚠️ Beetaversioon. Kui midagi ei tööta, proovi lehte värskendada
+    (Ctrl+Shift+R / Cmd+Shift+R).
+  </p>
 
   <!-- ABCJS -->
   <script src="https://cdn.jsdelivr.net/npm/abcjs@6.2.3/dist/abcjs-basic-min.js"></script>
 
   <script>
-    // Rütmimustrid:
-    // q     = veerand
-    // 8-8   = kaks kaheksandikku (ti-ti)
+    // Rütmimustrid
+    // q   = veerand
+    // 8-8 = kaks kaheksandikku (ti-ti)
     const barPatterns = [
       ["q","q","8-8","q"],
       ["q","8-8","q","q"],
@@ -51,13 +85,13 @@
     }
 
     // ABC: L:1/8
-    // veerand = d1
-    // ti-ti = dd (koos, et tuleks üks tala)
+    // veerand = c2
+    // ti-ti = cc (koos, et oleks üks tala)
     function barToABC(bar) {
       let s = "";
       for (const t of bar) {
-        if (t === "q") s += "d1 ";
-        if (t === "8-8") s += "dd ";
+        if (t === "q") s += "c2 ";
+        if (t === "8-8") s += "cc ";
       }
       return s.trim();
     }
@@ -69,7 +103,7 @@
       return `X:1
 M:4/4
 L:1/8
-K:none clef=none stafflines=0 
+K:none clef=none stafflines=0
 ${barToABC(b1)} | ${barToABC(b2)} |]`;
     }
 
@@ -79,12 +113,13 @@ ${barToABC(b1)} | ${barToABC(b2)} |]`;
 
       ABCJS.renderAbc("paper", abc, {
         responsive: "resize",
-        staffwidth: 760
+        staffwidth: 760,
+        stemsUp: true   // ⬅️ SUNNIB kõik varred üles
       });
     }
 
     document.getElementById("btn").addEventListener("click", render);
-    render();
+    render(); // näita kohe üks harjutus
   </script>
 
 </body>
