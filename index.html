@@ -148,7 +148,11 @@
     }
 
     #paper { overflow-x: auto; }
-    #paper svg { display: block; }
+    #paper svg {
+      display: block;
+      max-width: 100%;
+      height: auto;
+    }
 
     .small {
       margin-top: 16px;
@@ -436,6 +440,7 @@
       const marginTop = 24;
 
       const rowMeasures = 4;
+      // Baas-laius (CSS skaleerib vajadusel ekraani järgi)
       const measureW = 280;
       const gap = 16;
       const rowGapY = 110;
@@ -444,6 +449,7 @@
       const rows = Math.ceil(measures.length / rowMeasures);
       const cols = Math.min(rowMeasures, measures.length);
 
+      // SVG laius: ära sunni viewportist laiemaks – lase CSS-il skaleerida
       const W = marginLeft + cols * (measureW + gap) - gap + rightPad;
       const H = 170 + (rows - 1) * 130;
 
