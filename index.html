@@ -59,9 +59,10 @@
 
     @media (min-width: 880px) {
       .layout {
-        grid-template-columns: 360px 1fr;
+        grid-template-columns: 340px minmax(0, 1fr);
         align-items: start;
       }
+    }
     }
 
     .card {
@@ -444,9 +445,10 @@
       const marginLeft = 40;
       const marginTop = 24;
 
-      const rowMeasures = 4;
+      const rowMeasures = 4; // 4 takti reas, aga suuremad
       // Baas-laius (CSS skaleerib vajadusel ekraani järgi)
-      const measureW = 280;
+      // Ekraanivaade: lubame suurema taktilaiuse (print skaleerib niikuinii)
+      const measureW = 320;
       const gap = 16;
       const rowGapY = 110;
       const rightPad = 28;
