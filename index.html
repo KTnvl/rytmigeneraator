@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Rütmiharjutuste generaator (beeta)</title>
+  <title>R&#252;tmiharjutuste generaator (beeta)</title>
 
   <style>
     :root {
@@ -63,7 +63,6 @@
         align-items: start;
       }
     }
-    }
 
     .card {
       background: var(--card);
@@ -73,7 +72,6 @@
       padding: 14px;
     }
 
-    /* Tulemuse kaardil vähem "raami", et noodid saaks suuremad olla */
     .card.paper {
       padding: 10px;
     }
@@ -174,7 +172,6 @@
       .card { box-shadow: none; border: 0; padding: 0; }
       .layout { grid-template-columns: 1fr; }
       #paper { overflow: visible; }
-      /* skaleeri SVG paberi laiusele */
       #paper svg { width: 100% !important; height: auto !important; }
     }
   </style>
@@ -183,8 +180,8 @@
 
   <header>
     <div>
-      <h1>Rütmiharjutuste generaator (beeta)</h1>
-      <div class="tagline">Vali rütmid, taktimõõt ja pikkus – siis genereeri uus harjutus.</div>
+      <h1>R&#252;tmiharjutuste generaator (beeta)</h1>
+      <div class="tagline">Vali r&#252;tmid, taktim&#245;&#245;t ja pikkus &ndash; siis genereeri uus harjutus.</div>
     </div>
   </header>
 
@@ -194,19 +191,23 @@
       <h2>Sisu</h2>
       <div class="grid" style="margin-bottom: 10px;">
         <label class="chk"><input type="checkbox" id="tok_ta" checked /> ta (veerand)</label>
-        <label class="chk"><input type="checkbox" id="tok_titi" checked /> ti-ti (2× 1/8)</label>
-        <label class="chk"><input type="checkbox" id="tok_tiri" /> ti-ri (4× 1/16)</label>
+        <label class="chk"><input type="checkbox" id="tok_titi" checked /> ti-ti (2x 1/8)</label>
+        <label class="chk"><input type="checkbox" id="tok_tiri" /> ti-ri (4x 1/16)</label>
         <label class="chk"><input type="checkbox" id="tok_taa" /> ta-a (poolnoot)</label>
+        <label class="chk"><input type="checkbox" id="tok_tairi" /> tai-ri (punktiga, 1 l&#246;&#246;k)</label>
+        <label class="chk"><input type="checkbox" id="tok_taiti" /> ta-i-ti (punktiga, 2 l&#246;&#246;ki)</label>
+        <label class="chk"><input type="checkbox" id="tok_triplet" /> trioolid</label>
+        <label class="chk"><input type="checkbox" id="tok_sync" /> s&#252;nkoobid</label>
       </div>
 
       <label class="chk" style="margin-bottom: 12px;">
-        <input type="checkbox" id="incl_rests" checked /> Lisa pausid (vastavad vältused)
+        <input type="checkbox" id="incl_rests" checked /> Lisa pausid (vastavad v&#228;ltused)
       </label>
 
       <h2>Seaded</h2>
       <div class="row" style="margin-bottom: 10px;">
         <div style="flex:1; min-width: 140px;">
-          <div class="muted" style="margin: 0 0 6px;">Taktimõõt</div>
+          <div class="muted" style="margin: 0 0 6px;">Taktim&#245;&#245;t</div>
           <select id="timeSig">
             <option value="2/4">2/4</option>
             <option value="3/4">3/4</option>
@@ -229,7 +230,7 @@
         <button id="btnPrint" type="button" class="ghost">Print</button>
       </div>
 
-      <div class="small">Nipp: kui midagi ei uuene, tee värskendus (Ctrl+Shift+R / Cmd+Shift+R).</div>
+      <div class="small">Nipp: kui midagi ei uuene, tee v&#228;rskendus (Ctrl+Shift+R / Cmd+Shift+R).</div>
     </section>
 
     <section class="card paper">
@@ -239,18 +240,32 @@
   </div>
 
   <script>
-    // === RÜTMI LOOGIKA (ühik = 1/16) ===
-    // 2/4 = 8, 3/4 = 12, 4/4 = 16
+    // NOTE: ASCII-only source to avoid host/encoding issues.
+
+    // === UNIT SYSTEM ===
+    // 1 quarter note (one beat in x/4) = 24 ticks
+    // 1/8 = 12, 1/16 = 6, 8th-triplet = 8
+    const TICKS_PER_BEAT = 24;
+
+    // === RHYTHM LOGIC ===
     const DUR = {
-      TA: 4,      // veerand
-      TI_TI: 4,   // kaks kaheksandikku (2+2)
-      TI_RI: 4,   // neli kuueteistkümnendikku (1+1+1+1)
-      TA_A: 8     // pool
+      TA: 24,
+      TI_TI: 24,
+      TI_RI: 24,
+      TA_A: 48,
+
+      // New:
+      DOTTED_8_16: 24,   // tai-ri: 18 + 6 (one beat)
+      DOTTED_Q_8: 48,    // ta-i-ti: 36 + 12 (two beats)
+      TRIPLET_8: 24,     // 8 + 8 + 8
+      SYNC_OFFBEAT_8: 24, // 1/8 rest + 1/8 note (shown off-beat)
+      SYNC_LONG_Q: 36,   // 1/8 rest + 1/4 note (long syncopation)
+      SYNC_16_8_16: 24   // 1/16 + 1/8 + 1/16 (short syncopation)
     };
 
-    function beatsToUnits(numer, denom) {
-      // Praegu toetame ainult x/4 (2/4, 3/4, 4/4)
-      return numer * 4;
+    function beatsToTicks(numer, denom) {
+      // Only support x/4 for now
+      return numer * TICKS_PER_BEAT;
     }
 
     function getConfig() {
@@ -259,10 +274,20 @@
       if (document.getElementById('tok_titi').checked) enabled.push('TI_TI');
       if (document.getElementById('tok_tiri').checked) enabled.push('TI_RI');
       if (document.getElementById('tok_taa').checked) enabled.push('TA_A');
+      if (document.getElementById('tok_tairi').checked) enabled.push('DOTTED_8_16');
+      if (document.getElementById('tok_taiti').checked) enabled.push('DOTTED_Q_8');
+      if (document.getElementById('tok_triplet').checked) enabled.push('TRIPLET_8');
+      if (document.getElementById('tok_sync').checked) {
+        enabled.push('SYNC_OFFBEAT_8');
+        enabled.push('SYNC_LONG_Q');
+        enabled.push('SYNC_16_8_16');
+      }
 
       const includeRests = document.getElementById('incl_rests').checked;
       const ts = document.getElementById('timeSig').value;
-      const [numer, denom] = ts.split('/').map(x => parseInt(x, 10));
+      const parts = ts.split('/').map(x => parseInt(x, 10));
+      const numer = parts[0];
+      const denom = parts[1];
       const measures = parseInt(document.getElementById('length').value, 10);
 
       return { enabled, includeRests, numer, denom, measures };
@@ -273,11 +298,11 @@
     }
 
     function sumDur(tokens) {
-      return tokens.reduce((acc, t) => acc + (t?.dur || 0), 0);
+      return tokens.reduce((acc, t) => acc + (t && t.dur ? t.dur : 0), 0);
     }
 
     function generateMeasure(cfg) {
-      const total = beatsToUnits(cfg.numer, cfg.denom);
+      const total = beatsToTicks(cfg.numer, cfg.denom);
       let left = total;
       const out = [];
 
@@ -285,7 +310,7 @@
       for (const t of cfg.enabled) {
         choices.push({ kind: 'note', type: t, dur: DUR[t] });
         if (cfg.includeRests) {
-          // MVP: pausid on veerand- või poolpaus (ti-ti / ti-ri paus -> veerandpaus)
+          // MVP rests: quarter or half
           const restDur = (t === 'TA_A') ? DUR.TA_A : DUR.TA;
           choices.push({ kind: 'rest', type: 'REST', dur: restDur });
         }
@@ -295,19 +320,19 @@
         choices.push({ kind: 'note', type: 'TA', dur: DUR.TA });
       }
 
-      for (let guard = 0; guard < 300 && left > 0; guard++) {
+      for (let guard = 0; guard < 400 && left > 0; guard++) {
         const possible = choices.filter(c => c.dur <= left);
         if (possible.length === 0) break;
 
         let next = pick(possible);
 
-        // Ära alusta takti pausiga
+        // Do not start measure with rest
         if (out.length === 0 && next.kind === 'rest') {
           const nonRests = possible.filter(c => c.kind === 'note');
           if (nonRests.length) next = pick(nonRests);
         }
 
-        // Väldi liiga palju järjest pause
+        // Avoid consecutive rests
         const last = out[out.length - 1];
         if (last && last.kind === 'rest' && next.kind === 'rest') {
           const nonRests = possible.filter(c => c.kind === 'note');
@@ -318,7 +343,7 @@
         left -= next.dur;
       }
 
-      // Turvaline täitmine
+      // Fill remaining with quarters
       while (left > 0) {
         if (left >= DUR.TA) {
           out.push({ kind: 'note', type: 'TA', dur: DUR.TA });
@@ -338,22 +363,30 @@
     }
 
     // === SVG RENDER ===
-    function svgEl(tag, attrs = {}) {
+    function svgEl(tag, attrs) {
       const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
-      for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, String(v));
+      if (attrs) {
+        for (const k in attrs) el.setAttribute(k, String(attrs[k]));
+      }
       return el;
     }
 
-    function drawNotehead(svg, cx, cy, filled = true) {
+    function drawNotehead(svg, cx, cy, filled) {
       const e = svgEl('ellipse', {
-        cx, cy,
-        rx: 7.8, ry: 5.7,
+        cx: cx,
+        cy: cy,
+        rx: 7.8,
+        ry: 5.7,
         stroke: '#111',
         'stroke-width': 1.8,
         fill: filled ? '#111' : 'none'
       });
-      e.setAttribute('transform', `rotate(-20 ${cx} ${cy})`);
+      e.setAttribute('transform', 'rotate(-20 ' + cx + ' ' + cy + ')');
       svg.appendChild(e);
+    }
+
+    function drawDot(svg, x, y) {
+      svg.appendChild(svgEl('circle', { cx: x, cy: y, r: 2.3, fill: '#111' }));
     }
 
     function drawStemUp(svg, xRightOfHead, headY, stemH) {
@@ -366,29 +399,47 @@
       }));
     }
 
-    // Pausid: veerandpaus Unicode'iga, poolpaus oma joonistus
-    function drawRest(svg, cx, cy, durUnits) {
-      const isHalf = durUnits >= 8;
-      const xOpt = cx + (isHalf ? 3 : 6);
+    function drawFlag(svg, xStem, yTop, isSixteenth) {
+      const p1 = svgEl('path', {
+        d: 'M ' + (xStem+2) + ' ' + (yTop+2) +
+           ' C ' + (xStem+14) + ' ' + (yTop+6) + ', ' + (xStem+16) + ' ' + (yTop+18) + ', ' + (xStem+4) + ' ' + (yTop+22) +
+           ' C ' + (xStem+12) + ' ' + (yTop+18) + ', ' + (xStem+10) + ' ' + (yTop+10) + ', ' + (xStem+2) + ' ' + (yTop+8) +
+           ' Z',
+        fill: '#111'
+      });
+      svg.appendChild(p1);
 
-      if (isHalf) {
+      if (isSixteenth) {
+        const y2 = yTop + 10;
+        const p2 = svgEl('path', {
+          d: 'M ' + (xStem+2) + ' ' + (y2+2) +
+             ' C ' + (xStem+14) + ' ' + (y2+6) + ', ' + (xStem+16) + ' ' + (y2+18) + ', ' + (xStem+4) + ' ' + (y2+22) +
+             ' C ' + (xStem+12) + ' ' + (y2+18) + ', ' + (xStem+10) + ' ' + (y2+10) + ', ' + (xStem+2) + ' ' + (y2+8) +
+             ' Z',
+          fill: '#111'
+        });
+        svg.appendChild(p2);
+      }
+    }
+
+    // Music rest glyphs via codepoints (avoid raw non-ASCII in source)
+    const GLYPH_REST_QUARTER = String.fromCodePoint(0x1D13D);
+    const GLYPH_REST_EIGHTH = String.fromCodePoint(0x1D13E);
+    const GLYPH_REST_SIXTEENTH = String.fromCodePoint(0x1D13F);
+
+    function drawRest(svg, cx, cy, durTicks) {
+      const xOpt = cx + 6;
+
+      // half rest drawn (with clear top edge)
+      if (durTicks >= 48) {
         const w = 22;
         const h = 8;
         const y = cy - 18;
-
-        svg.appendChild(svgEl('rect', {
-          x: xOpt - w / 2,
-          y,
-          width: w,
-          height: h,
-          fill: '#111',
-          rx: 2
-        }));
-
+        svg.appendChild(svgEl('rect', { x: xOpt - w/2, y: y, width: w, height: h, fill: '#111', rx: 2 }));
         svg.appendChild(svgEl('line', {
-          x1: xOpt - (w / 2) - 6,
+          x1: xOpt - (w/2) - 6,
           y1: y,
-          x2: xOpt + (w / 2) + 6,
+          x2: xOpt + (w/2) + 6,
           y2: y,
           stroke: '#111',
           'stroke-width': 2
@@ -396,12 +447,13 @@
         return;
       }
 
-      const glyph = '𝄽';
-      const yOpt = cy - 10;
+      let glyph = GLYPH_REST_QUARTER;
+      if (durTicks === 12) glyph = GLYPH_REST_EIGHTH;
+      if (durTicks === 6) glyph = GLYPH_REST_SIXTEENTH;
 
       const t = svgEl('text', {
         x: xOpt,
-        y: yOpt,
+        y: cy - 10,
         'text-anchor': 'middle',
         'dominant-baseline': 'middle',
         'font-size': 40,
@@ -412,11 +464,9 @@
       svg.appendChild(t);
     }
 
-    // --- MuseScore'i loogika (beat-grid) ---
-    function unitsPerBeat() { return 4; } // x/4
+    function ticksPerBeat() { return TICKS_PER_BEAT; }
 
     function beatGrid(cfg, x0, x1, isLastMeasure) {
-      // Vähem "õhku" taktijoonte juures (sinu tagasiside): toome sisu barline'idele lähemale.
       const padL = 4;
       const padR = isLastMeasure ? 18 : 12;
       const innerX0 = x0 + padL;
@@ -426,28 +476,35 @@
       return { innerX0, innerX1, beatW, beats };
     }
 
-    // Pad: väiksem pad => suuremad vahed nootide vahel (täpselt see, mida sa palusid)
-    function centersWithinSpan(xStart, spanW, n, pad) {
-      const usable = Math.max(0, spanW - pad * 2);
-      const out = [];
-      for (let i = 0; i < n; i++) {
-        const t = (i + 0.5) / n;
-        out.push(xStart + pad + t * usable);
-      }
-      return out;
+    function centersFromParts(spanX0, spanW, partsTicks, pad) {
+      const total = partsTicks.reduce((a,b)=>a+b,0);
+      const usable = Math.max(0, spanW - pad*2);
+      let cur = 0;
+      return partsTicks.map(d => {
+        const c = spanX0 + pad + (cur + d/2) * (usable / total);
+        cur += d;
+        return c;
+      });
+    }
+
+    function drawTripletBracket(svg, xA, xB, y, label) {
+      const h = 8;
+      svg.appendChild(svgEl('line', { x1: xA, y1: y, x2: xB, y2: y, stroke: '#111', 'stroke-width': 1.6 }));
+      svg.appendChild(svgEl('line', { x1: xA, y1: y, x2: xA, y2: y + h, stroke: '#111', 'stroke-width': 1.6 }));
+      svg.appendChild(svgEl('line', { x1: xB, y1: y, x2: xB, y2: y + h, stroke: '#111', 'stroke-width': 1.6 }));
+      const t = svgEl('text', { x: (xA+xB)/2, y: y - 2, 'text-anchor': 'middle', 'font-size': 22, 'font-family': 'serif', fill: '#111' });
+      t.textContent = label || '3';
+      svg.appendChild(t);
     }
 
     function renderSVG(cfg, measures) {
       const paper = document.getElementById('paper');
       paper.innerHTML = '';
 
-      // Paigutus
-      const marginLeft = 40;
+      const marginLeft = 58;
       const marginTop = 24;
 
-      const rowMeasures = 4; // 4 takti reas, aga suuremad
-      // Baas-laius (CSS skaleerib vajadusel ekraani järgi)
-      // Ekraanivaade: lubame suurema taktilaiuse (print skaleerib niikuinii)
+      const rowMeasures = 4;
       const measureW = 320;
       const gap = 16;
       const rowGapY = 110;
@@ -456,7 +513,6 @@
       const rows = Math.ceil(measures.length / rowMeasures);
       const cols = Math.min(rowMeasures, measures.length);
 
-      // SVG laius: ära sunni viewportist laiemaks – lase CSS-il skaleerida
       const W = marginLeft + cols * (measureW + gap) - gap + rightPad;
       const H = 170 + (rows - 1) * 130;
 
@@ -465,183 +521,320 @@
       const noteY = 80;
       const stemH = 38;
 
-      const svg = svgEl('svg', { width: W, height: H, viewBox: `0 0 ${W} ${H}` });
+      const svg = svgEl('svg', { width: W, height: H, viewBox: '0 0 ' + W + ' ' + H });
       paper.appendChild(svg);
 
-      // Time signature (ainult esimesel real)
-      const tsX = 10;
-      const tsTop = svgEl('text', { x: tsX, y: 78, 'font-size': 30, 'font-family': 'serif', fill: '#111' });
-      tsTop.textContent = String(cfg.numer);
-      const tsBottom = svgEl('text', { x: tsX, y: 106, 'font-size': 30, 'font-family': 'serif', fill: '#111' });
-      tsBottom.textContent = String(cfg.denom);
-      svg.appendChild(tsTop);
-      svg.appendChild(tsBottom);
+      function drawTimeSigAtRow(yRow0) {
+        const tsX = 18;
+        const tsTop = svgEl('text', { x: tsX, y: yRow0 + 78, 'font-size': 30, 'font-family': 'serif', fill: '#111' });
+        tsTop.textContent = String(cfg.numer);
+        const tsBottom = svgEl('text', { x: tsX, y: yRow0 + 106, 'font-size': 30, 'font-family': 'serif', fill: '#111' });
+        tsBottom.textContent = String(cfg.denom);
+        svg.appendChild(tsTop);
+        svg.appendChild(tsBottom);
+      }
 
       function drawBarline(x, y0) {
-        svg.appendChild(svgEl('line', {
-          x1: x, y1: y0 + topY,
-          x2: x, y2: y0 + bottomY,
-          stroke: '#111',
-          'stroke-width': 2
-        }));
+        svg.appendChild(svgEl('line', { x1: x, y1: y0 + topY, x2: x, y2: y0 + bottomY, stroke: '#111', 'stroke-width': 2 }));
       }
 
       function drawFinalBarline(x, y0) {
-        svg.appendChild(svgEl('line', {
-          x1: x, y1: y0 + topY,
-          x2: x, y2: y0 + bottomY,
-          stroke: '#111',
-          'stroke-width': 2
-        }));
-        svg.appendChild(svgEl('line', {
-          x1: x + 6, y1: y0 + topY,
-          x2: x + 6, y2: y0 + bottomY,
-          stroke: '#111',
-          'stroke-width': 5
-        }));
+        svg.appendChild(svgEl('line', { x1: x, y1: y0 + topY, x2: x, y2: y0 + bottomY, stroke: '#111', 'stroke-width': 2 }));
+        svg.appendChild(svgEl('line', { x1: x + 6, y1: y0 + topY, x2: x + 6, y2: y0 + bottomY, stroke: '#111', 'stroke-width': 5 }));
       }
 
-      const totalUnits = beatsToUnits(cfg.numer, cfg.denom);
-      const UPB = unitsPerBeat();
+      const totalTicks = beatsToTicks(cfg.numer, cfg.denom);
+      const TPB = ticksPerBeat();
 
-      // Sinu soov: suuremad vahed TI-TI ja TI-RI sees
-      // Väiksem pad => suurem vahe
-      // Väiksem pad => suurem vahe rühma sees
-      const PAD_TITI = 3;
-      const PAD_TIRI = 0;
+      // Larger pads = more inner spacing within groups
+      const PAD_TITI = 6;
+      const PAD_TIRI = 6;
+      const PAD_TRIP = 2;
+      const PAD_DOTTED = 5;
+      const PAD_DOTTED_LONG = 8; // for 2-beat dotted groups
+      const PAD_SYNC = 4;
 
       for (let i = 0; i < measures.length; i++) {
         const row = Math.floor(i / rowMeasures);
         const col = i % rowMeasures;
 
+        const y0 = marginTop + row * rowGapY;
         const x0 = marginLeft + col * (measureW + gap);
         const x1 = x0 + measureW;
-        const y0 = marginTop + row * rowGapY;
+
+        // Draw time signature at the start of each row (before the first measure)
+        if (col === 0) drawTimeSigAtRow(y0);
 
         const isLast = (i === measures.length - 1);
         if (isLast) drawFinalBarline(x1, y0);
         else drawBarline(x1, y0);
 
         const grid = beatGrid(cfg, x0, x1, isLast);
-
         const tokens = measures[i];
-        let cursorUnits = 0;
 
-        for (let ti = 0; ti < tokens.length; ti++) {
-          const tok = tokens[ti];
-
-          const startBeat = cursorUnits / UPB;
-          const spanBeats = tok.dur / UPB;
+        let cursor = 0;
+        for (const tok of tokens) {
+          const startBeat = cursor / TPB;
+          const spanBeats = tok.dur / TPB;
 
           const spanX0 = grid.innerX0 + startBeat * grid.beatW;
           const spanW = spanBeats * grid.beatW;
 
-          let centers;
+          // Token -> parts: each part is drawn individually within beat-span.
+          let parts;
           if (tok.kind === 'rest') {
-            centers = [spanX0 + spanW / 2];
-          } else if (tok.type === 'TA' || tok.type === 'TA_A') {
-            centers = [spanX0 + spanW / 2];
+            parts = [{ kind: 'rest', ticks: tok.dur }];
+          } else if (tok.type === 'TA') {
+            parts = [{ kind: 'note', ticks: DUR.TA }];
+          } else if (tok.type === 'TA_A') {
+            parts = [{ kind: 'note', ticks: DUR.TA_A }];
           } else if (tok.type === 'TI_TI') {
-            centers = centersWithinSpan(spanX0, spanW, 2, PAD_TITI);
+            parts = [
+              { kind: 'note', ticks: 12, level: 1 },
+              { kind: 'note', ticks: 12, level: 1 }
+            ];
           } else if (tok.type === 'TI_RI') {
-            centers = centersWithinSpan(spanX0, spanW, 4, PAD_TIRI);
+            parts = [
+              { kind: 'note', ticks: 6, level: 2 },
+              { kind: 'note', ticks: 6, level: 2 },
+              { kind: 'note', ticks: 6, level: 2 },
+              { kind: 'note', ticks: 6, level: 2 }
+            ];
+          } else if (tok.type === 'DOTTED_8_16') {
+            // tai-ri: dotted 8th + 16th
+            parts = [
+              { kind: 'note', ticks: 18, dotted: true, level: 1 },
+              { kind: 'note', ticks: 6, level: 2 }
+            ];
+          } else if (tok.type === 'DOTTED_Q_8') {
+            // ta-i-ti: dotted quarter + 8th (2 beats)
+            parts = [
+              { kind: 'note', ticks: 36, dotted: true, level: 0 },
+              { kind: 'note', ticks: 12, level: 1, forceFlag: true }
+            ];
+          } else if (tok.type === 'TRIPLET_8') {
+            parts = [
+              { kind: 'note', ticks: 8, level: 1 },
+              { kind: 'note', ticks: 8, level: 1 },
+              { kind: 'note', ticks: 8, level: 1 }
+            ];
+          } else if (tok.type === 'SYNC_OFFBEAT_8') {
+            // Short syncopation (off-beat 8th): (1/8 rest + 1/8 note)
+            parts = [
+              { kind: 'rest', ticks: 12 },
+              { kind: 'note', ticks: 12, level: 1, forceFlag: true }
+            ];
+          } else if (tok.type === 'SYNC_LONG_Q') {
+            // Long syncopation: (1/8 rest + 1/4 note)
+            parts = [
+              { kind: 'rest', ticks: 12 },
+              { kind: 'note', ticks: 24, level: 0 }
+            ];
+          } else if (tok.type === 'SYNC_16_8_16') {
+            // Short syncopation: 1/16 + 1/8 + 1/16 (beamed)
+            parts = [
+              { kind: 'note', ticks: 6, level: 2 },
+              { kind: 'note', ticks: 12, level: 1 },
+              { kind: 'note', ticks: 6, level: 2 }
+            ];
           } else {
-            centers = [spanX0 + spanW / 2];
+            parts = [{ kind: 'note', ticks: tok.dur }];
           }
 
-          const center = centers[Math.floor(centers.length / 2)] ?? (spanX0 + spanW / 2);
+          const pad = (
+            tok.type === 'TI_TI' ? PAD_TITI :
+            tok.type === 'TI_RI' ? PAD_TIRI :
+            tok.type === 'TRIPLET_8' ? PAD_TRIP :
+            tok.type === 'DOTTED_8_16' ? PAD_DOTTED :
+            tok.type === 'DOTTED_Q_8' ? PAD_DOTTED_LONG :
+            tok.type === 'SYNC_OFFBEAT_8' ? PAD_SYNC :
+            6
+          );
 
-          if (tok.kind === 'note') {
-            if (tok.type === 'TA_A') {
-              drawNotehead(svg, center, y0 + noteY, false);
-              drawStemUp(svg, center + 6, y0 + noteY, stemH);
-            } else if (tok.type === 'TA') {
-              drawNotehead(svg, center, y0 + noteY, true);
-              drawStemUp(svg, center + 6, y0 + noteY, stemH);
-            } else if (tok.type === 'TI_TI') {
-              const cx1 = centers[0];
-              const cx2 = centers[1];
-              drawNotehead(svg, cx1, y0 + noteY, true);
-              drawNotehead(svg, cx2, y0 + noteY, true);
-              drawStemUp(svg, cx1 + 6, y0 + noteY, stemH);
-              drawStemUp(svg, cx2 + 6, y0 + noteY, stemH);
-              const beamY = y0 + noteY - stemH;
-              const beamX1 = cx1 + 6;
-              const beamX2 = cx2 + 8;
-              svg.appendChild(svgEl('rect', { x: beamX1, y: beamY, width: (beamX2 - beamX1), height: 6, fill: '#111' }));
-            } else if (tok.type === 'TI_RI') {
-              const cxs = centers;
-              for (const cx of cxs) {
-                drawNotehead(svg, cx, y0 + noteY, true);
-                drawStemUp(svg, cx + 6, y0 + noteY, stemH);
-              }
-              const beamY = y0 + noteY - stemH;
-              const xA = cxs[0] + 6;
-              const xB = cxs[cxs.length - 1] + 6;
-              svg.appendChild(svgEl('rect', { x: xA, y: beamY, width: (xB - xA), height: 6, fill: '#111' }));
-              svg.appendChild(svgEl('rect', { x: xA, y: beamY + 9, width: (xB - xA), height: 6, fill: '#111' }));
+          const centers = (parts.length === 1)
+            ? [spanX0 + spanW/2]
+            : centersFromParts(spanX0, spanW, parts.map(p => p.ticks), pad);
+
+          const stemXs = [];
+          const stemTopY = y0 + noteY - stemH;
+
+          for (let pi = 0; pi < parts.length; pi++) {
+            const p = parts[pi];
+            const cx = centers[pi];
+
+            if (p.kind === 'rest') {
+              if (cfg.includeRests) drawRest(svg, cx, y0 + noteY, p.ticks);
+              continue;
             }
-          } else {
-            const durUnits = tok.dur >= 8 ? 8 : 4;
-            drawRest(svg, center, y0 + noteY, durUnits);
+
+            const isHalf = (p.ticks >= 48) || (tok.type === 'TA_A');
+            const filled = !isHalf;
+            drawNotehead(svg, cx, y0 + noteY, filled);
+            drawStemUp(svg, cx + 6, y0 + noteY, stemH);
+            stemXs.push(cx + 6);
+
+            if (p.dotted) drawDot(svg, cx + 14, y0 + noteY - 2);
+
+            // Single 8ths created by syncopation or dotted group should have a flag (not beamed)
+            if (p.forceFlag || (tok.type === 'SYNC_OFFBEAT_8' && p.ticks === 12 && parts.length === 2)) {
+              drawFlag(svg, cx + 6, stemTopY, false);
+            }
           }
 
-          cursorUnits += tok.dur;
+          const beamY = stemTopY;
+          function beamLine(xA, xB, y, thickness) {
+            svg.appendChild(svgEl('rect', { x: xA, y: y, width: (xB - xA), height: (thickness || 6), fill: '#111' }));
+          }
+
+          if (tok.type === 'TI_TI' && stemXs.length === 2) {
+            beamLine(stemXs[0], stemXs[1] + 2, beamY, 6);
+          }
+
+          if (tok.type === 'TI_RI' && stemXs.length === 4) {
+            beamLine(stemXs[0], stemXs[3] + 2, beamY, 6);
+            beamLine(stemXs[0], stemXs[3] + 2, beamY + 9, 6);
+          }
+
+          if (tok.type === 'TRIPLET_8' && stemXs.length === 3) {
+            beamLine(stemXs[0], stemXs[2] + 2, beamY, 6);
+            const xA = centers[0] - 10;
+            const xB = centers[2] + 10;
+            drawTripletBracket(svg, xA, xB, beamY - 18, '3');
+          }
+
+          if (tok.type === 'DOTTED_8_16' && stemXs.length === 2) {
+            // 1st beam spans both notes
+            beamLine(stemXs[0], stemXs[1] + 2, beamY, 6);
+            // 2nd beam only on 16th; keep it shorter so it sits inside the dotted figure
+            beamLine(stemXs[1] - 10, stemXs[1] + 2, beamY + 9, 6);
+          }
+
+          if (tok.type === 'SYNC_16_8_16' && stemXs.length === 3) {
+            // 8th beam across all three
+            beamLine(stemXs[0], stemXs[2] + 2, beamY, 6);
+            // 16th beams on first and last notes
+            beamLine(stemXs[0] - 6, stemXs[0] + 10, beamY + 9, 6);
+            beamLine(stemXs[2] - 10, stemXs[2] + 6, beamY + 9, 6);
+          }
+
+          cursor += tok.dur;
         }
+
+        console.assert(cursor === totalTicks, 'Measure tick sum mismatch (render)', { cfg: cfg, i: i, cursor: cursor, totalTicks: totalTicks, tokens: tokens });
       }
     }
 
-    // === TESTID ===
+    // === TESTS ===
+    function formatErrorText(err) {
+      const msg = (err && err.message) ? err.message : String(err);
+      const stack = (err && err.stack) ? err.stack : '';
+      return 'Viga: ' + msg + '\n\n' + stack;
+    }
+
+    function showError(err) {
+      const paper = document.getElementById('paper');
+      paper.innerHTML = '';
+      const pre = document.createElement('pre');
+      pre.style.whiteSpace = 'pre-wrap';
+      pre.style.padding = '12px';
+      pre.style.color = '#111';
+      pre.textContent = formatErrorText(err);
+      paper.appendChild(pre);
+    }
+
     function runTests() {
-      const cfg44 = { enabled: ['TA','TI_TI','TI_RI','TA_A'], includeRests: true, numer: 4, denom: 4, measures: 4 };
-      const cfg34 = { enabled: ['TA','TI_TI'], includeRests: true, numer: 3, denom: 4, measures: 4 };
-      const cfg24 = { enabled: ['TA','TA_A'], includeRests: false, numer: 2, denom: 4, measures: 4 };
+      const cfg44 = { enabled: ['TA','TI_TI','TI_RI','TA_A','DOTTED_8_16','DOTTED_Q_8','TRIPLET_8','SYNC_OFFBEAT_8','SYNC_LONG_Q','SYNC_16_8_16'], includeRests: true, numer: 4, denom: 4, measures: 4 };
+      const cfg34 = { enabled: ['TA','TI_TI','DOTTED_8_16','DOTTED_Q_8','TRIPLET_8'], includeRests: true, numer: 3, denom: 4, measures: 4 };
+      const cfg24 = { enabled: ['TA','TA_A','TRIPLET_8'], includeRests: false, numer: 2, denom: 4, measures: 4 };
 
       for (const cfg of [cfg44, cfg34, cfg24]) {
-        const total = beatsToUnits(cfg.numer, cfg.denom);
-        for (let i = 0; i < 50; i++) {
+        const total = beatsToTicks(cfg.numer, cfg.denom);
+        for (let i = 0; i < 80; i++) {
           const m = generateMeasure(cfg);
           console.assert(sumDur(m) === total, 'Measure duration mismatch', cfg, m);
           console.assert(!(m[0] && m[0].kind === 'rest'), 'Measure starts with rest (should not)', cfg, m);
+          if (!cfg.includeRests) {
+            console.assert(!m.some(x => x.kind === 'rest'), 'No rests expected when includeRests=false', cfg, m);
+          }
         }
         const ex = generateExercise(cfg);
         console.assert(ex.length === cfg.measures, 'Exercise length mismatch', cfg, ex);
       }
 
-      // beat-grid basic
-      {
-        const cfg = { numer: 4, denom: 4 };
-        const x0 = 100;
-        const x1 = 324;
-        const grid = beatGrid(cfg, x0, x1, true);
-        console.assert(Number.isFinite(grid.beatW) && grid.beatW > 0, 'beatW invalid', grid);
+      // Dotted rhythms
+      console.assert(DUR.DOTTED_8_16 === 24, 'tai-ri dur wrong');
+      console.assert(DUR.DOTTED_Q_8 === 48, 'ta-i-ti dur wrong');
+      const c1 = centersFromParts(0, 240, [18,6], 4);
+      const c1b = centersFromParts(0, 480, [36,12], 8);
+      console.assert(c1.length === 2 && c1[1] > c1[0], 'centersFromParts order wrong', c1);
+      console.assert(c1b.length === 2 && c1b[1] > c1b[0], 'centersFromParts order wrong (ta-i-ti)', c1b);
+
+      // Triplet equal spacing
+      console.assert(DUR.TRIPLET_8 === 24, 'Triplet dur wrong');
+      const c2 = centersFromParts(0, 240, [8,8,8], 2);
+      const d1 = c2[1] - c2[0];
+      const d2 = c2[2] - c2[1];
+      console.assert(Math.abs(d1 - d2) < 0.001 * 240, 'Triplet spacing uneven', { c2: c2, d1: d1, d2: d2 });
+
+      // Syncopations
+      console.assert(DUR.SYNC_OFFBEAT_8 === 24, 'SYNC_OFFBEAT_8 dur wrong');
+      console.assert(DUR.SYNC_LONG_Q === 36, 'SYNC_LONG_Q dur wrong');
+      console.assert(DUR.SYNC_16_8_16 === 24, 'SYNC_16_8_16 dur wrong');
+      const c3 = centersFromParts(0, 240, [12,24], 4); // long sync parts
+      console.assert(c3.length === 2 && c3[1] > c3[0], 'Long sync centers wrong', c3);
+      const c4 = centersFromParts(0, 240, [6,12,6], 4);
+      console.assert(c4.length === 3 && c4[2] > c4[1] && c4[1] > c4[0], 'Short sync centers wrong', c4);
+
+      // Render should not throw for multi-row (e.g. 8 measures)
+      try {
+        const cfg8 = { enabled: ['TA','TI_TI','TI_RI','TA_A','DOTTED_8_16','DOTTED_Q_8','TRIPLET_8','SYNC_OFFBEAT_8','SYNC_LONG_Q','SYNC_16_8_16'], includeRests: true, numer: 4, denom: 4, measures: 8 };
+        const ex8 = generateExercise(cfg8);
+        renderSVG(cfg8, ex8);
+        console.assert(true, 'renderSVG multi-row ok');
+      } catch (e) {
+        console.assert(false, 'renderSVG should not throw (multi-row)', e);
       }
 
-      // pad effect: väiksem pad peab andma suurema noot-noot vahe
-      {
-        const xsA = centersWithinSpan(0, 100, 4, 12);
-        const xsB = centersWithinSpan(0, 100, 4, 4);
-        console.assert((xsB[1] - xsB[0]) > (xsA[1] - xsA[0]), 'Pad spacing test failed', { xsA, xsB });
-      }
+      // Error format
+      const txt = formatErrorText(new Error('test'));
+      console.assert(txt.indexOf('\n\n') >= 0, 'formatErrorText should include blank line');
+
+      // Rest glyphs must be strings (and not empty)
+      console.assert(typeof GLYPH_REST_QUARTER === 'string' && GLYPH_REST_QUARTER.length > 0, 'Quarter rest glyph missing');
+      console.assert(typeof GLYPH_REST_EIGHTH === 'string' && GLYPH_REST_EIGHTH.length > 0, 'Eighth rest glyph missing');
+      console.assert(typeof GLYPH_REST_SIXTEENTH === 'string' && GLYPH_REST_SIXTEENTH.length > 0, 'Sixteenth rest glyph missing');
+
+      // Syntax sanity: token types are unique
+      const types = Object.keys(DUR);
+      console.assert(new Set(types).size === types.length, 'DUR keys should be unique');
     }
 
     let lastCfg = null;
 
     function generateAndRender() {
-      const cfg = getConfig();
-      lastCfg = cfg;
-      const ex = generateExercise(cfg);
-      renderSVG(cfg, ex);
+      try {
+        const cfg = getConfig();
+        lastCfg = cfg;
+        const ex = generateExercise(cfg);
+        renderSVG(cfg, ex);
+      } catch (err) {
+        console.error(err);
+        showError(err);
+      }
     }
 
     function again() {
-      if (!lastCfg) return generateAndRender();
-      const ex = generateExercise(lastCfg);
-      renderSVG(lastCfg, ex);
+      try {
+        if (!lastCfg) return generateAndRender();
+        const ex = generateExercise(lastCfg);
+        renderSVG(lastCfg, ex);
+      } catch (err) {
+        console.error(err);
+        showError(err);
+      }
     }
 
     function printPage() {
-      // mõnes keskkonnas (nt preview) on print piiratud, aga päris brauseris töötab.
       window.print();
     }
 
@@ -649,7 +842,11 @@
     document.getElementById('btnAgain').addEventListener('click', (e) => { e.preventDefault(); again(); });
     document.getElementById('btnPrint').addEventListener('click', (e) => { e.preventDefault(); printPage(); });
 
-    runTests();
+    window.addEventListener('error', (e) => {
+      try { showError(e && e.error ? e.error : e); } catch (_) {}
+    });
+
+    try { runTests(); } catch (err) { console.error(err); showError(err); }
     generateAndRender();
   </script>
 
