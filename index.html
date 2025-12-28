@@ -387,7 +387,7 @@
       const marginTop = 24;
 
       const rowMeasures = 4; // mitu takti ühel real
-      const measureW = 180;
+      const measureW = 210; // rohkem "õhku" nii ta- kui ka ti-ti gruppide vahele
       const gap = 26;
       const rowGapY = 110;
 
@@ -456,7 +456,7 @@
               drawStemUp(svg, cx2 + 6, y0 + noteY, stemH);
               const beamY = y0 + noteY - stemH;
               const beamX1 = cx1 + 6;
-              const beamX2 = cx2 + 6 + 2.2; // ära lase talal liiga kaugele üle ulatuda
+              const beamX2 = cx2 + 8; // väike üleulatus näeb puhtam välja
               svg.appendChild(svgEl('rect', { x: beamX1, y: beamY, width: (beamX2 - beamX1), height: 6, fill: '#111' }));
             } else if (tok.type === 'TI_RI') {
               const dx = 36;
@@ -468,7 +468,7 @@
               }
               const beamY = y0 + noteY - stemH;
               const xA = cxs[0] + 6;
-              const xB = cxs[3] + 6 + 2.2; // vähenda tala "overhang'i"
+              const xB = cxs[3] + 8; // väike üleulatus näeb puhtam välja
               svg.appendChild(svgEl('rect', { x: xA, y: beamY, width: (xB - xA), height: 6, fill: '#111' }));
               svg.appendChild(svgEl('rect', { x: xA, y: beamY + 9, width: (xB - xA), height: 6, fill: '#111' }));
             }
