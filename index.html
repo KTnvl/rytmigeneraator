@@ -259,7 +259,8 @@
       DOTTED_Q_8: 48,    // ta-i-ti: 36 + 12 (two beats)
       TRIPLET_8: 24,     // 8 + 8 + 8
       SYNC_OFFBEAT_8: 24, // 1/8 rest + 1/8 note (shown off-beat)
-      SYNC_LONG_Q: 36,   // 1/8 rest + 1/4 note (long syncopation)
+      SYNC_LONG_Q: 36,   // 1/8 rest + 1/4 note (long syncopation, with rest)
+      SYNC_TIE_8_Q: 36,  // 1/8 + 1/4 tied (long syncopation, no rest)
       SYNC_16_8_16: 24   // 1/16 + 1/8 + 1/16 (short syncopation)
     };
 
@@ -280,6 +281,7 @@
       if (document.getElementById('tok_sync').checked) {
         enabled.push('SYNC_OFFBEAT_8');
         enabled.push('SYNC_LONG_Q');
+        enabled.push('SYNC_TIE_8_Q');
         enabled.push('SYNC_16_8_16');
       }
 
@@ -400,6 +402,8 @@
     }
 
     function drawFlag(svg, xStem, yTop, isSixteenth) {
+      // simple single-note flag; good enough for exercises
+
       const p1 = svgEl('path', {
         d: 'M ' + (xStem+2) + ' ' + (yTop+2) +
            ' C ' + (xStem+14) + ' ' + (yTop+6) + ', ' + (xStem+16) + ' ' + (yTop+18) + ', ' + (xStem+4) + ' ' + (yTop+22) +
@@ -426,6 +430,18 @@
     const GLYPH_REST_QUARTER = String.fromCodePoint(0x1D13D);
     const GLYPH_REST_EIGHTH = String.fromCodePoint(0x1D13E);
     const GLYPH_REST_SIXTEENTH = String.fromCodePoint(0x1D13F);
+
+    function drawTie(svg, x1, x2, y) {
+      // Simple tie curve between two noteheads (above notes)
+      const mid = (x1 + x2) / 2;
+      const h = 10;
+      const p = svgEl('path', {
+        d: 'M ' + x1 + ' ' + y + ' Q ' + mid + ' ' + (y + h) + ' ' + x2 + ' ' + y +
+           ' Q ' + mid + ' ' + (y + h + 6) + ' ' + x1 + ' ' + y,
+        fill: '#111'
+      });
+      svg.appendChild(p);
+    }
 
     function drawRest(svg, cx, cy, durTicks) {
       const xOpt = cx + 6;
@@ -583,7 +599,7 @@
           // Token -> parts: each part is drawn individually within beat-span.
           let parts;
           if (tok.kind === 'rest') {
-            parts = [{ kind: 'rest', ticks: tok.dur }];
+            parts = [{ kind: 'rest', ticks: tok.dur, optional: true }];
           } else if (tok.type === 'TA') {
             parts = [{ kind: 'note', ticks: DUR.TA }];
           } else if (tok.type === 'TA_A') {
@@ -621,14 +637,20 @@
           } else if (tok.type === 'SYNC_OFFBEAT_8') {
             // Short syncopation (off-beat 8th): (1/8 rest + 1/8 note)
             parts = [
-              { kind: 'rest', ticks: 12 },
+              { kind: 'rest', ticks: 12, required: true },
               { kind: 'note', ticks: 12, level: 1, forceFlag: true }
             ];
           } else if (tok.type === 'SYNC_LONG_Q') {
-            // Long syncopation: (1/8 rest + 1/4 note)
+            // Long syncopation (with rest): (1/8 rest + 1/4 note)
             parts = [
-              { kind: 'rest', ticks: 12 },
+              { kind: 'rest', ticks: 12, required: true },
               { kind: 'note', ticks: 24, level: 0 }
+            ];
+          } else if (tok.type === 'SYNC_TIE_8_Q') {
+            // Long syncopation (no rest): 1/8 + 1/4, tied
+            parts = [
+              { kind: 'note', ticks: 12, level: 1, forceFlag: true, tieStart: true },
+              { kind: 'note', ticks: 24, level: 0, tieEnd: true }
             ];
           } else if (tok.type === 'SYNC_16_8_16') {
             // Short syncopation: 1/16 + 1/8 + 1/16 (beamed)
@@ -656,6 +678,7 @@
             : centersFromParts(spanX0, spanW, parts.map(p => p.ticks), pad);
 
           const stemXs = [];
+          const noteCenters = []; // for ties
           const stemTopY = y0 + noteY - stemH;
 
           for (let pi = 0; pi < parts.length; pi++) {
@@ -663,7 +686,10 @@
             const cx = centers[pi];
 
             if (p.kind === 'rest') {
-              if (cfg.includeRests) drawRest(svg, cx, y0 + noteY, p.ticks);
+              // Standalone rests respect cfg.includeRests; syncopation-internal rests are required.
+              if (!p.optional || p.required || cfg.includeRests) {
+                drawRest(svg, cx, y0 + noteY, p.ticks);
+              }
               continue;
             }
 
@@ -672,6 +698,7 @@
             drawNotehead(svg, cx, y0 + noteY, filled);
             drawStemUp(svg, cx + 6, y0 + noteY, stemH);
             stemXs.push(cx + 6);
+            noteCenters.push(cx);
 
             if (p.dotted) drawDot(svg, cx + 14, y0 + noteY - 2);
 
@@ -709,12 +736,17 @@
             beamLine(stemXs[1] - 10, stemXs[1] + 2, beamY + 9, 6);
           }
 
+          // Tie rendering temporarily disabled for SYNC_TIE_8_Q (no ties shown yet)
+          // if (tok.type === 'SYNC_TIE_8_Q' && noteCenters.length === 2) {
+          //   drawTie(svg, noteCenters[0] + 2, noteCenters[1] - 2, y0 + noteY + 14);
+          // }
+
           if (tok.type === 'SYNC_16_8_16' && stemXs.length === 3) {
             // 8th beam across all three
             beamLine(stemXs[0], stemXs[2] + 2, beamY, 6);
-            // 16th beams on first and last notes
-            beamLine(stemXs[0] - 6, stemXs[0] + 10, beamY + 9, 6);
-            beamLine(stemXs[2] - 10, stemXs[2] + 6, beamY + 9, 6);
+            // 16th beams on first and last notes (shorter so they stay inside the rhythm figure)
+            beamLine(stemXs[0] + 1, stemXs[0] + 7, beamY + 9, 6);
+            beamLine(stemXs[2] - 6, stemXs[2] + 2, beamY + 9, 6);
           }
 
           cursor += tok.dur;
@@ -779,9 +811,12 @@
       // Syncopations
       console.assert(DUR.SYNC_OFFBEAT_8 === 24, 'SYNC_OFFBEAT_8 dur wrong');
       console.assert(DUR.SYNC_LONG_Q === 36, 'SYNC_LONG_Q dur wrong');
+      console.assert(DUR.SYNC_TIE_8_Q === 36, 'SYNC_TIE_8_Q dur wrong');
       console.assert(DUR.SYNC_16_8_16 === 24, 'SYNC_16_8_16 dur wrong');
-      const c3 = centersFromParts(0, 240, [12,24], 4); // long sync parts
+      const c3 = centersFromParts(0, 240, [12,24], 4); // long sync parts (rest+note)
+      const c3b = centersFromParts(0, 240, [12,24], 4); // tie version uses same spacing // long sync parts
       console.assert(c3.length === 2 && c3[1] > c3[0], 'Long sync centers wrong', c3);
+      console.assert(c3b.length === 2 && c3b[1] > c3b[0], 'Long sync centers wrong (tie)', c3b);
       const c4 = centersFromParts(0, 240, [6,12,6], 4);
       console.assert(c4.length === 3 && c4[2] > c4[1] && c4[1] > c4[0], 'Short sync centers wrong', c4);
 
