@@ -19,7 +19,7 @@
       font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans", "Helvetica Neue", sans-serif;
       color: var(--ink);
       background: radial-gradient(1200px 500px at 10% 0%, #eef2ff 0%, var(--bg) 55%, #fff7ed 120%);
-      max-width: 980px;
+      max-width: 1200px;
       margin: 22px auto;
       padding: 0 14px 40px;
       line-height: 1.35;
@@ -70,6 +70,11 @@
       border-radius: 18px;
       box-shadow: 0 14px 30px rgba(17, 24, 39, 0.08);
       padding: 14px;
+    }
+
+    /* Tulemuse kaardil vähem "raami", et noodid saaks suuremad olla */
+    .card.paper {
+      padding: 10px;
     }
 
     .controls h2 {
@@ -226,7 +231,7 @@
       <div class="small">Nipp: kui midagi ei uuene, tee värskendus (Ctrl+Shift+R / Cmd+Shift+R).</div>
     </section>
 
-    <section class="card">
+    <section class="card paper">
       <div id="paper"></div>
     </section>
 
