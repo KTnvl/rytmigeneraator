@@ -148,6 +148,7 @@
     }
 
     #paper { overflow-x: auto; }
+    #paper svg { display: block; }
 
     .small {
       margin-top: 16px;
@@ -155,13 +156,16 @@
       color: var(--muted);
     }
 
-    /* Print: peida seadistused, näita ainult tulemust */
+    /* PRINT */
     @media print {
-      body { background: white; }
-      .controls { display: none; }
-      .card { box-shadow: none; }
+      @page { margin: 12mm; }
+      body { background: white; margin: 0; max-width: none; padding: 0; }
+      header, .controls { display: none !important; }
+      .card { box-shadow: none; border: 0; padding: 0; }
       .layout { grid-template-columns: 1fr; }
-      header .tagline { display: none; }
+      #paper { overflow: visible; }
+      /* skaleeri SVG paberi laiusele */
+      #paper svg { width: 100% !important; height: auto !important; }
     }
   </style>
 </head>
@@ -210,9 +214,9 @@
       </div>
 
       <div class="btnbar">
-        <button id="btnGen">Genereeri</button>
-        <button id="btnAgain" class="secondary">Uuesti</button>
-        <button id="btnPrint" class="ghost">Print</button>
+        <button id="btnGen" type="button">Genereeri</button>
+        <button id="btnAgain" type="button" class="secondary">Uuesti</button>
+        <button id="btnPrint" type="button" class="ghost">Print</button>
       </div>
 
       <div class="small">Nipp: kui midagi ei uuene, tee värskendus (Ctrl+Shift+R / Cmd+Shift+R).</div>
@@ -267,36 +271,33 @@
       let left = total;
       const out = [];
 
-      // ehitame tokenite nimekirja koos pausivõimalusega
       const choices = [];
       for (const t of cfg.enabled) {
         choices.push({ kind: 'note', type: t, dur: DUR[t] });
-        // pausid: lihtsustame – TI_TI ja TI_RI pausid käituvad veerandpausina
         if (cfg.includeRests) {
+          // MVP: pausid on veerand- või poolpaus (ti-ti / ti-ri paus -> veerandpaus)
           const restDur = (t === 'TA_A') ? DUR.TA_A : DUR.TA;
           choices.push({ kind: 'rest', type: 'REST', dur: restDur });
         }
       }
 
-      // Kui kasutaja võtab kõik maha, paneme fallback'i
       if (choices.length === 0) {
         choices.push({ kind: 'note', type: 'TA', dur: DUR.TA });
       }
 
-      // Täitmine: vali sobivaid, mis mahuvad sisse
       for (let guard = 0; guard < 300 && left > 0; guard++) {
         const possible = choices.filter(c => c.dur <= left);
         if (possible.length === 0) break;
 
         let next = pick(possible);
 
-        // Ära alusta takti pausiga (pedagoogiline ja visuaalne selgus)
+        // Ära alusta takti pausiga
         if (out.length === 0 && next.kind === 'rest') {
           const nonRests = possible.filter(c => c.kind === 'note');
           if (nonRests.length) next = pick(nonRests);
         }
 
-        // väldi liiga palju järjest pause
+        // Väldi liiga palju järjest pause
         const last = out[out.length - 1];
         if (last && last.kind === 'rest' && next.kind === 'rest') {
           const nonRests = possible.filter(c => c.kind === 'note');
@@ -307,7 +308,7 @@
         left -= next.dur;
       }
 
-      // kui midagi jäi, täida veeranditega
+      // Turvaline täitmine
       while (left > 0) {
         if (left >= DUR.TA) {
           out.push({ kind: 'note', type: 'TA', dur: DUR.TA });
@@ -326,10 +327,10 @@
       return measures;
     }
 
-    // === SVG RENDER (puhas rütmipaber) ===
+    // === SVG RENDER ===
     function svgEl(tag, attrs = {}) {
       const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
-      for (const [k,v] of Object.entries(attrs)) el.setAttribute(k, String(v));
+      for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, String(v));
       return el;
     }
 
@@ -355,41 +356,96 @@
       }));
     }
 
-    // Pausid (MVP): veerand ja pool
+    // Pausid: veerandpaus Unicode'iga, poolpaus oma joonistus
     function drawRest(svg, cx, cy, durUnits) {
-      // poolpaus – täidetud ristkülik
-      if (durUnits >= 8) {
-        svg.appendChild(svgEl('rect', { x: cx - 10, y: cy - 10, width: 20, height: 10, fill: '#111', rx: 2 }));
+      const isHalf = durUnits >= 8;
+      const xOpt = cx + (isHalf ? 3 : 6);
+
+      if (isHalf) {
+        const w = 22;
+        const h = 8;
+        const y = cy - 18;
+
+        svg.appendChild(svgEl('rect', {
+          x: xOpt - w / 2,
+          y,
+          width: w,
+          height: h,
+          fill: '#111',
+          rx: 2
+        }));
+
+        svg.appendChild(svgEl('line', {
+          x1: xOpt - (w / 2) - 6,
+          y1: y,
+          x2: xOpt + (w / 2) + 6,
+          y2: y,
+          stroke: '#111',
+          'stroke-width': 2
+        }));
         return;
       }
 
-      // veerandpaus – rahulik siksak
-      const path = svgEl('path', {
-        d: `M ${cx} ${cy-16} C ${cx+6} ${cy-10}, ${cx-8} ${cy-6}, ${cx-2} ${cy-2}
-            C ${cx+4} ${cy+2}, ${cx-8} ${cy+6}, ${cx-2} ${cy+10}
-            C ${cx+4} ${cy+14}, ${cx-2} ${cy+18}, ${cx-2} ${cy+22}`,
-        fill: 'none',
-        stroke: '#111',
-        'stroke-width': 3.0,
-        'stroke-linecap': 'round',
-        'stroke-linejoin': 'round'
+      const glyph = '𝄽';
+      const yOpt = cy - 10;
+
+      const t = svgEl('text', {
+        x: xOpt,
+        y: yOpt,
+        'text-anchor': 'middle',
+        'dominant-baseline': 'middle',
+        'font-size': 40,
+        'font-family': 'Bravura, "Noto Music", "Segoe UI Symbol", "Arial Unicode MS", serif',
+        fill: '#111'
       });
-      svg.appendChild(path);
+      t.textContent = glyph;
+      svg.appendChild(t);
+    }
+
+    // --- MuseScore'i loogika (beat-grid) ---
+    function unitsPerBeat() { return 4; } // x/4
+
+    function beatGrid(cfg, x0, x1, isLastMeasure) {
+      // Vähem "õhku" taktijoonte juures (sinu tagasiside): toome sisu barline'idele lähemale.
+      const padL = 4;
+      const padR = isLastMeasure ? 18 : 12;
+      const innerX0 = x0 + padL;
+      const innerX1 = x1 - padR;
+      const beats = cfg.numer;
+      const beatW = (innerX1 - innerX0) / beats;
+      return { innerX0, innerX1, beatW, beats };
+    }
+
+    // Pad: väiksem pad => suuremad vahed nootide vahel (täpselt see, mida sa palusid)
+    function centersWithinSpan(xStart, spanW, n, pad) {
+      const usable = Math.max(0, spanW - pad * 2);
+      const out = [];
+      for (let i = 0; i < n; i++) {
+        const t = (i + 0.5) / n;
+        out.push(xStart + pad + t * usable);
+      }
+      return out;
     }
 
     function renderSVG(cfg, measures) {
       const paper = document.getElementById('paper');
       paper.innerHTML = '';
 
-      const W = 860;
-      const H = 170 + Math.floor((measures.length - 1) / 4) * 130; // reavahetus iga 4 takti järel
-      const marginLeft = 86;
+      // Paigutus
+      const marginLeft = 40;
       const marginTop = 24;
 
-      const rowMeasures = 4; // mitu takti ühel real
-      const measureW = 210; // rohkem "õhku" nii ta- kui ka ti-ti gruppide vahele
-      const gap = 26;
+      const rowMeasures = 4;
+      const measureW = 280;
+      const gap = 16;
       const rowGapY = 110;
+      const rightPad = 28;
+
+      const rows = Math.ceil(measures.length / rowMeasures);
+      const cols = Math.min(rowMeasures, measures.length);
+
+      const W = marginLeft + cols * (measureW + gap) - gap + rightPad;
+      const H = 170 + (rows - 1) * 130;
 
       const topY = 38;
       const bottomY = 116;
@@ -399,8 +455,8 @@
       const svg = svgEl('svg', { width: W, height: H, viewBox: `0 0 ${W} ${H}` });
       paper.appendChild(svg);
 
-      // Time signature vasakul (ainult esimesel real)
-      const tsX = 20;
+      // Time signature (ainult esimesel real)
+      const tsX = 10;
       const tsTop = svgEl('text', { x: tsX, y: 78, 'font-size': 30, 'font-family': 'serif', fill: '#111' });
       tsTop.textContent = String(cfg.numer);
       const tsBottom = svgEl('text', { x: tsX, y: 106, 'font-size': 30, 'font-family': 'serif', fill: '#111' });
@@ -408,14 +464,38 @@
       svg.appendChild(tsTop);
       svg.appendChild(tsBottom);
 
-      function drawBarline(x, y0, isFinal = false) {
-        svg.appendChild(svgEl('line', { x1: x, y1: y0 + topY, x2: x, y2: y0 + bottomY, stroke: '#111', 'stroke-width': 2 }));
-        if (isFinal) {
-          svg.appendChild(svgEl('line', { x1: x - 6, y1: y0 + topY, x2: x - 6, y2: y0 + bottomY, stroke: '#111', 'stroke-width': 2 }));
-        }
+      function drawBarline(x, y0) {
+        svg.appendChild(svgEl('line', {
+          x1: x, y1: y0 + topY,
+          x2: x, y2: y0 + bottomY,
+          stroke: '#111',
+          'stroke-width': 2
+        }));
+      }
+
+      function drawFinalBarline(x, y0) {
+        svg.appendChild(svgEl('line', {
+          x1: x, y1: y0 + topY,
+          x2: x, y2: y0 + bottomY,
+          stroke: '#111',
+          'stroke-width': 2
+        }));
+        svg.appendChild(svgEl('line', {
+          x1: x + 6, y1: y0 + topY,
+          x2: x + 6, y2: y0 + bottomY,
+          stroke: '#111',
+          'stroke-width': 5
+        }));
       }
 
       const totalUnits = beatsToUnits(cfg.numer, cfg.denom);
+      const UPB = unitsPerBeat();
+
+      // Sinu soov: suuremad vahed TI-TI ja TI-RI sees
+      // Väiksem pad => suurem vahe
+      // Väiksem pad => suurem vahe rühma sees
+      const PAD_TITI = 3;
+      const PAD_TIRI = 0;
 
       for (let i = 0; i < measures.length; i++) {
         const row = Math.floor(i / rowMeasures);
@@ -425,65 +505,80 @@
         const x1 = x0 + measureW;
         const y0 = marginTop + row * rowGapY;
 
-        // Start barline: alates teisest takist samal real (ja ka uuel real)
-        if (!(row === 0 && col === 0)) drawBarline(x0, y0, false);
-
-        // End barline: ainult viimasel taktil lõpujoon (väldime topeltjooni keskel)
         const isLast = (i === measures.length - 1);
-        if (isLast) drawBarline(x1, y0, true);
+        if (isLast) drawFinalBarline(x1, y0);
+        else drawBarline(x1, y0);
 
-        let cursor = 0;
+        const grid = beatGrid(cfg, x0, x1, isLast);
+
         const tokens = measures[i];
+        let cursorUnits = 0;
 
-        for (const tok of tokens) {
-          const center = x0 + (cursor + tok.dur / 2) * (measureW / totalUnits);
+        for (let ti = 0; ti < tokens.length; ti++) {
+          const tok = tokens[ti];
+
+          const startBeat = cursorUnits / UPB;
+          const spanBeats = tok.dur / UPB;
+
+          const spanX0 = grid.innerX0 + startBeat * grid.beatW;
+          const spanW = spanBeats * grid.beatW;
+
+          let centers;
+          if (tok.kind === 'rest') {
+            centers = [spanX0 + spanW / 2];
+          } else if (tok.type === 'TA' || tok.type === 'TA_A') {
+            centers = [spanX0 + spanW / 2];
+          } else if (tok.type === 'TI_TI') {
+            centers = centersWithinSpan(spanX0, spanW, 2, PAD_TITI);
+          } else if (tok.type === 'TI_RI') {
+            centers = centersWithinSpan(spanX0, spanW, 4, PAD_TIRI);
+          } else {
+            centers = [spanX0 + spanW / 2];
+          }
+
+          const center = centers[Math.floor(centers.length / 2)] ?? (spanX0 + spanW / 2);
 
           if (tok.kind === 'note') {
             if (tok.type === 'TA_A') {
-              // poolnoot: õõnes
               drawNotehead(svg, center, y0 + noteY, false);
               drawStemUp(svg, center + 6, y0 + noteY, stemH);
             } else if (tok.type === 'TA') {
               drawNotehead(svg, center, y0 + noteY, true);
               drawStemUp(svg, center + 6, y0 + noteY, stemH);
             } else if (tok.type === 'TI_TI') {
-              const dx = 22;
-              const cx1 = center - dx/2;
-              const cx2 = center + dx/2;
+              const cx1 = centers[0];
+              const cx2 = centers[1];
               drawNotehead(svg, cx1, y0 + noteY, true);
               drawNotehead(svg, cx2, y0 + noteY, true);
               drawStemUp(svg, cx1 + 6, y0 + noteY, stemH);
               drawStemUp(svg, cx2 + 6, y0 + noteY, stemH);
               const beamY = y0 + noteY - stemH;
               const beamX1 = cx1 + 6;
-              const beamX2 = cx2 + 8; // väike üleulatus näeb puhtam välja
+              const beamX2 = cx2 + 8;
               svg.appendChild(svgEl('rect', { x: beamX1, y: beamY, width: (beamX2 - beamX1), height: 6, fill: '#111' }));
             } else if (tok.type === 'TI_RI') {
-              const dx = 36;
-              const step = dx / 3;
-              const cxs = [center - dx/2, center - dx/2 + step, center - dx/2 + 2*step, center + dx/2];
+              const cxs = centers;
               for (const cx of cxs) {
                 drawNotehead(svg, cx, y0 + noteY, true);
                 drawStemUp(svg, cx + 6, y0 + noteY, stemH);
               }
               const beamY = y0 + noteY - stemH;
               const xA = cxs[0] + 6;
-              const xB = cxs[3] + 8; // väike üleulatus näeb puhtam välja
+              const xB = cxs[cxs.length - 1] + 6;
               svg.appendChild(svgEl('rect', { x: xA, y: beamY, width: (xB - xA), height: 6, fill: '#111' }));
               svg.appendChild(svgEl('rect', { x: xA, y: beamY + 9, width: (xB - xA), height: 6, fill: '#111' }));
             }
           } else {
-            // rest
-            const durUnits = tok.dur >= 8 ? 8 : 4; // meie MVP-s ainult pool- või veerandpaus
-            drawRest(svg, center, y0 + noteY - 4, durUnits);
+            const durUnits = tok.dur >= 8 ? 8 : 4;
+            drawRest(svg, center, y0 + noteY, durUnits);
           }
 
-          cursor += tok.dur;
+          cursorUnits += tok.dur;
         }
       }
     }
 
-    // === TESTID (lihtsad sanity-checkid) ===
+    // === TESTID ===
     function runTests() {
       const cfg44 = { enabled: ['TA','TI_TI','TI_RI','TA_A'], includeRests: true, numer: 4, denom: 4, measures: 4 };
       const cfg34 = { enabled: ['TA','TI_TI'], includeRests: true, numer: 3, denom: 4, measures: 4 };
@@ -496,6 +591,24 @@
           console.assert(sumDur(m) === total, 'Measure duration mismatch', cfg, m);
           console.assert(!(m[0] && m[0].kind === 'rest'), 'Measure starts with rest (should not)', cfg, m);
         }
+        const ex = generateExercise(cfg);
+        console.assert(ex.length === cfg.measures, 'Exercise length mismatch', cfg, ex);
+      }
+
+      // beat-grid basic
+      {
+        const cfg = { numer: 4, denom: 4 };
+        const x0 = 100;
+        const x1 = 324;
+        const grid = beatGrid(cfg, x0, x1, true);
+        console.assert(Number.isFinite(grid.beatW) && grid.beatW > 0, 'beatW invalid', grid);
+      }
+
+      // pad effect: väiksem pad peab andma suurema noot-noot vahe
+      {
+        const xsA = centersWithinSpan(0, 100, 4, 12);
+        const xsB = centersWithinSpan(0, 100, 4, 4);
+        console.assert((xsB[1] - xsB[0]) > (xsA[1] - xsA[0]), 'Pad spacing test failed', { xsA, xsB });
       }
     }
 
@@ -515,15 +628,14 @@
     }
 
     function printPage() {
+      // mõnes keskkonnas (nt preview) on print piiratud, aga päris brauseris töötab.
       window.print();
     }
 
-    // Wire up
-    document.getElementById('btnGen').addEventListener('click', generateAndRender);
-    document.getElementById('btnAgain').addEventListener('click', again);
-    document.getElementById('btnPrint').addEventListener('click', printPage);
+    document.getElementById('btnGen').addEventListener('click', (e) => { e.preventDefault(); generateAndRender(); });
+    document.getElementById('btnAgain').addEventListener('click', (e) => { e.preventDefault(); again(); });
+    document.getElementById('btnPrint').addEventListener('click', (e) => { e.preventDefault(); printPage(); });
 
-    // Auto render + testid
     runTests();
     generateAndRender();
   </script>
