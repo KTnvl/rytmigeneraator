@@ -65,6 +65,28 @@
       }
     }
 
+    /* Kontrollide peitmine (täisekraan režiim) */
+    .layout.controls-hidden .controls {
+      display: none;
+    }
+
+    .layout.controls-hidden {
+      grid-template-columns: 1fr;
+    }
+
+    #btnToggleUI {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 100;
+      display: none;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+    .layout.controls-hidden #btnToggleUI {
+      display: block;
+    }
+
     .card {
       background: var(--card);
       border: 1px solid var(--border);
@@ -401,6 +423,7 @@
         <button id="btnGen" type="button">Genereeri</button>
         <button id="btnAgain" type="button" class="secondary">Uuesti</button>
         <button id="btnPrint" type="button" class="ghost">Print</button>
+        <button id="btnToggleUI" type="button" class="ghost">⚙️ Peida kontrollid</button>
       </div>
 
       <div class="small">Nipp: kui midagi ei uuene, tee värskendus (Ctrl+Shift+R / Cmd+Shift+R).</div>
@@ -972,6 +995,28 @@
     document.getElementById('btnGen').addEventListener('click', (e) => { e.preventDefault(); generateAndRender(); });
     document.getElementById('btnAgain').addEventListener('click', (e) => { e.preventDefault(); again(); });
     document.getElementById('btnPrint').addEventListener('click', (e) => { e.preventDefault(); printPage(); });
+    
+    // Kontrollide peitmise toggle
+    const btnToggle = document.getElementById('btnToggleUI');
+    const layout = document.querySelector('.layout');
+    let controlsHidden = false;
+    
+    btnToggle.addEventListener('click', (e) => {
+      e.preventDefault();
+      controlsHidden = !controlsHidden;
+      
+      if (controlsHidden) {
+        layout.classList.add('controls-hidden');
+        btnToggle.textContent = '⚙️ Näita kontrolle';
+        btnToggle.classList.remove('ghost');
+        btnToggle.classList.add('primary');
+      } else {
+        layout.classList.remove('controls-hidden');
+        btnToggle.textContent = '⚙️ Peida kontrollid';
+        btnToggle.classList.remove('primary');
+        btnToggle.classList.add('ghost');
+      }
+    });
 
     window.addEventListener('error', (e) => {
       try { showError(e && e.error ? e.error : e); } catch (_) {}
