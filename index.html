@@ -59,7 +59,7 @@
 
     @media (min-width: 880px) {
       .layout {
-        grid-template-columns: 340px minmax(0, 1fr);
+        grid-template-columns: 360px minmax(0, 1fr);
         align-items: start;
       }
     }
@@ -94,17 +94,59 @@
       gap: 10px;
     }
 
+    /* rhythm pickers */
+    .rhythm-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
     label.chk {
       display: flex;
       align-items: center;
       gap: 10px;
-      padding: 10px 10px;
+      padding: 12px 10px;
       border: 1px solid var(--border);
       border-radius: 14px;
       background: rgba(255,255,255,0.75);
+      cursor: pointer;
+      transition: background 120ms ease;
+      justify-content: flex-start;
     }
 
-    label.chk input { transform: scale(1.2); }
+    label.chk:hover { background: rgba(255,255,255,0.95); }
+    label.chk input { transform: scale(1.2); flex-shrink: 0; }
+
+    .rhythm-icon {
+      width: 86px;
+      height: 40px;
+      display: block;
+      flex-shrink: 0;
+    }
+
+    .rhythm-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+    }
+
+    .rhythm-name {
+      font-weight: 650;
+      font-size: 0.98rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .rhythm-hint {
+      font-size: 0.9rem;
+      color: var(--muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
 
     .muted { color: var(--muted); }
 
@@ -152,16 +194,22 @@
     }
 
     #paper { overflow-x: auto; }
-    #paper svg {
-      display: block;
-      max-width: 100%;
-      height: auto;
-    }
+    #paper svg { display: block; max-width: 100%; height: auto; }
 
     .small {
       margin-top: 16px;
       font-size: 0.98rem;
       color: var(--muted);
+    }
+
+    .notice {
+      margin-top: 10px;
+      padding: 10px 12px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.6);
+      color: #374151;
+      font-size: 0.95rem;
     }
 
     /* PRINT */
@@ -177,8 +225,8 @@
     }
   </style>
 </head>
-<body>
 
+<body>
   <header>
     <div>
       <h1>Rütmiharjutuste generaator (beeta)</h1>
@@ -187,22 +235,16 @@
   </header>
 
   <div class="layout">
-
     <section class="card controls">
       <h2>Sisu</h2>
-      <div class="grid" style="margin-bottom: 10px;">
-        <label class="chk"><input type="checkbox" id="tok_ta" checked /> ta (veerand)</label>
-        <label class="chk"><input type="checkbox" id="tok_titi" checked /> ti-ti (2× 1/8)</label>
-        <label class="chk"><input type="checkbox" id="tok_tiri" /> ti-ri (4× 1/16)</label>
-        <label class="chk"><input type="checkbox" id="tok_taa" /> ta-a (poolnoot)</label>
-        <label class="chk"><input type="checkbox" id="tok_tairi" /> tai-ri (punktiga, 1 löök)</label>
-        <label class="chk"><input type="checkbox" id="tok_taiti" /> ta-i-ti (punktiga, 2 lööki)</label>
-        <label class="chk"><input type="checkbox" id="tok_triplet" /> trioolid</label>
-        <label class="chk"><input type="checkbox" id="tok_sync" /> sünkoobid</label>
-      </div>
+      <div id="rhythmGrid" class="rhythm-grid" aria-label="Rütmikujundite valik"></div>
 
       <label class="chk" style="margin-bottom: 12px;">
-        <input type="checkbox" id="incl_rests" checked /> Lisa pausid (vastavad vältused)
+        <input type="checkbox" id="incl_rests" checked />
+        <span class="rhythm-meta">
+          <span class="rhythm-name">Lisa pausid</span>
+          <span class="rhythm-hint">Pausi vältus vastab valitud kujundile</span>
+        </span>
       </label>
 
       <h2>Seaded</h2>
@@ -212,14 +254,14 @@
           <select id="timeSig">
             <option value="2/4">2/4</option>
             <option value="3/4">3/4</option>
-            <option value="4/4" selected>4/4</option>
+            <option value="4/4">4/4</option>
           </select>
         </div>
         <div style="flex:1; min-width: 140px;">
           <div class="muted" style="margin: 0 0 6px;">Pikkus</div>
           <select id="length">
             <option value="2">2 takti</option>
-            <option value="4" selected>4 takti</option>
+            <option value="4">4 takti</option>
             <option value="8">8 takti</option>
           </select>
         </div>
@@ -228,7 +270,7 @@
       <div style="margin-bottom: 10px;">
         <div class="muted" style="margin: 0 0 6px;">Harjutuste arv</div>
         <select id="numExercises" style="width: 100%;">
-          <option value="1" selected>1 harjutus</option>
+          <option value="1">1 harjutus</option>
           <option value="2">2 harjutust</option>
           <option value="3">3 harjutust</option>
           <option value="4">4 harjutust</option>
@@ -243,79 +285,318 @@
         <button id="btnPrint" type="button" class="ghost">Print</button>
       </div>
 
+      <div class="notice">
+        Seaded salvestuvad automaatselt selles brauseris (et õpetajal oleks mugav).
+      </div>
+
       <div class="small">Nipp: kui midagi ei uuene, tee värskendus (Ctrl+Shift+R / Cmd+Shift+R).</div>
     </section>
 
     <section class="card paper">
       <div id="paper"></div>
     </section>
-
   </div>
 
   <script>
-    // NOTE: ASCII-only source to avoid host/encoding issues.
+    /********************
+     * STORAGE HELPERS  *
+     ********************/
+    const LS_KEY = "rhythm_gen_v1";
+    function loadState() {
+      try { return JSON.parse(localStorage.getItem(LS_KEY) || "{}"); }
+      catch { return {}; }
+    }
+    function saveState(partial) {
+      const cur = loadState();
+      const next = { ...cur, ...partial };
+      localStorage.setItem(LS_KEY, JSON.stringify(next));
+    }
 
-    // === UNIT SYSTEM ===
-    // 1 quarter note (one beat in x/4) = 24 ticks
-    // 1/8 = 12, 1/16 = 6, 8th-triplet = 8
-    const TICKS_PER_BEAT = 24;
+    /********************
+     * UNIT SYSTEM      *
+     ********************/
+    const TICKS_PER_BEAT = 24; // 1 beat = veerand (2/4,3/4,4/4 puhul sobib)
 
-    // === RHYTHM LOGIC ===
     const DUR = {
-      TA: 24,
-      TI_TI: 24,
-      TI_RI: 24,
-      TA_A: 48,
-
-      // New:
-      DOTTED_8_16: 24,   // tai-ri: 18 + 6 (one beat)
-      DOTTED_Q_8: 48,    // ta-i-ti: 36 + 12 (two beats)
-      TRIPLET_8: 24,     // 8 + 8 + 8
-      SYNC_OFFBEAT_8: 24, // 1/8 rest + 1/8 note (shown off-beat)
-      SYNC_LONG_Q: 36,   // 1/8 rest + 1/4 note (long syncopation, with rest)
-      SYNC_8_Q_8: 48,    // 1/8 + 1/4 + 1/8 (syncopation pattern, 2 beats)
-      SYNC_16_8_16: 24   // 1/16 + 1/8 + 1/16 (short syncopation)
+      TA: 24,                // veerand
+      TI_TI: 24,             // 2×kaheksandik (12+12)
+      TI_RI: 24,             // 4×kuueteistkümnendik (6+6+6+6)
+      TA_A_A: 96,            // täisnoot (4 lööki)
+      TA_A_I: 72,            // punkteeritud poolnoot (3 lööki)
+      DOTTED_8_16: 24,       // tai-ri (18+6)
+      DOTTED_Q_8: 48,        // ta-i-ti (36+12)
+      TRIPLET_8: 24,         // triool (8+8+8)
+      SYNC_16_8_16: 24,      // sünkoop lühike (6+12+6)
+      SYNC_8_Q_8: 48,        // sünkoop pikk (12+24+12)
+      TI_RI_TI: 24,          // 16+16+8 (6+6+12)
+      TI_TI_RI: 24,          // 8+16+16 (12+6+6)
+      TI_RI_TI_RI: 24        // 16+16+16+16 (graafiliselt 2+2)
     };
 
     function beatsToTicks(numer, denom) {
-      // Only support x/4 for now
-      return numer * TICKS_PER_BEAT;
-    }
-
-    function getConfig() {
-      const enabled = [];
-      if (document.getElementById('tok_ta').checked) enabled.push('TA');
-      if (document.getElementById('tok_titi').checked) enabled.push('TI_TI');
-      if (document.getElementById('tok_tiri').checked) enabled.push('TI_RI');
-      if (document.getElementById('tok_taa').checked) enabled.push('TA_A');
-      if (document.getElementById('tok_tairi').checked) enabled.push('DOTTED_8_16');
-      if (document.getElementById('tok_taiti').checked) enabled.push('DOTTED_Q_8');
-      if (document.getElementById('tok_triplet').checked) enabled.push('TRIPLET_8');
-      if (document.getElementById('tok_sync').checked) {
-        enabled.push('SYNC_OFFBEAT_8');
-        enabled.push('SYNC_LONG_Q');
-        enabled.push('SYNC_8_Q_8'); // 1/8 + 1/4 + 1/8
-        enabled.push('SYNC_8_Q_8'); // Add twice for higher probability
-        enabled.push('SYNC_16_8_16');
-      }
-
-      const includeRests = document.getElementById('incl_rests').checked;
-      const ts = document.getElementById('timeSig').value;
-      const parts = ts.split('/').map(x => parseInt(x, 10));
-      const numer = parts[0];
-      const denom = parts[1];
-      const measures = parseInt(document.getElementById('length').value, 10);
-      const numExercises = parseInt(document.getElementById('numExercises').value, 10);
-
-      return { enabled, includeRests, numer, denom, measures, numExercises };
+      // üldisem (kuigi sul denom alati 4): beats in quarter-notes = numer * (4/denom)
+      return Math.round(numer * TICKS_PER_BEAT * (4 / denom));
     }
 
     function pick(arr) {
       return arr[Math.floor(Math.random() * arr.length)];
     }
 
-    function sumDur(tokens) {
-      return tokens.reduce((acc, t) => acc + (t && t.dur ? t.dur : 0), 0);
+    /********************
+     * RHYTHM ICONS     *
+     * (inline SVG)     *
+     ********************/
+    function iconWrap(inner, viewBox, w=86, h=40) {
+      return `
+        <svg class="rhythm-icon" width="${w}" height="${h}" viewBox="${viewBox}" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          ${inner}
+        </svg>
+      `;
+    }
+
+    const ICONS = {
+      TA: iconWrap(`
+        <path transform="matrix(0.992126,0,0,0.992126,444.986,696.26)" d="M31.5,-8.14063 C29.7031,-11.4375 25.9063,-13.2344 21.2969,-13.2344 C17.9063,-13.2344 14.2031,-12.2344 10.5938,-10.3438 C4,-6.84375 0,-0.9375 0,4.15625 C0,5.5625 0.296875,6.96875 1,8.26563 C2.79688,11.5781 6.59375,13.2813 11.2031,13.2813 C14.5938,13.2813 18.2969,12.375 21.9063,10.4844 C28.5,6.96875 32.5,1.0625 32.5,-4.04688 C32.5,-5.4375 32.2031,-6.84375 31.5,-8.14063"/>
+        <polyline fill="none" stroke="#000000" stroke-width="2.73" points="475.858,693.085 475.858,615.65"/>
+      `, `445 610 80 130`),
+
+      TI_TI: iconWrap(`
+        <path transform="matrix(0.992126,0,0,0.992126,575.177,696.26)" d="M31.5,-8.09375 C29.7031,-11.4063 25.9063,-13.2031 21.2969,-13.2031 C17.9063,-13.2031 14.2031,-12.2031 10.5938,-10.2969 C4,-6.79688 0,-0.90625 0,4.20313 C0,5.59375 0.296875,7 1,8.29688 C2.79688,11.5938 6.59375,13.2969 11.2031,13.2969 C14.5938,13.2969 18.2969,12.4063 21.9063,10.5 C28.5,7 32.5,1.09375 32.5,-4 C32.5,-5.40625 32.2031,-6.79688 31.5,-8.09375"/>
+        <path transform="matrix(0.992126,0,0,0.992126,616.838,696.26)" d="M31.5,-8.09375 C29.7031,-11.4063 25.9063,-13.2031 21.2969,-13.2031 C17.9063,-13.2031 14.2031,-12.2031 10.5938,-10.2969 C4,-6.79688 0,-0.90625 0,4.20313 C0,5.59375 0.296875,7 1,8.29688 C2.79688,11.5938 6.59375,13.2969 11.2031,13.2969 C14.5938,13.2969 18.2969,12.4063 21.9063,10.5 C28.5,7 32.5,1.09375 32.5,-4 C32.5,-5.40625 32.2031,-6.79688 31.5,-8.09375"/>
+        <polyline fill="none" stroke="#000000" stroke-width="2.73" points="606.049,693.085 606.049,628.051"/>
+        <polyline fill="none" stroke="#000000" stroke-width="2.73" points="647.71,693.085 647.71,628.051"/>
+        <path fill-rule="evenodd" d="M604.685,621.85 L649.074,621.85 L649.074,634.252 L604.685,634.252 L604.685,621.85 "/>
+      `, `606 610 80 130`),
+
+      TA_A_A: iconWrap(`
+        <path transform="matrix(0.992126,0,0,0.992126,279.893,696.26)" d="M18.7031,-13.5938 C4.90625,-13.5938 0,-6.59375 0,-0.09375 C0,6.40625 4.90625,13.4063 18.7031,13.4063 C32.5,13.4063 37.2969,6.40625 37.2969,-0.09375 C37.2969,-6.59375 32.5,-13.5938 18.7031,-13.5938"/>
+      `, `280 610 80 130`),
+
+      TA_A_I: iconWrap(`
+        <path transform="matrix(0.992126,0,0,0.992126,356.457,721.063)" d="M31.5,-8.14063 C29.7031,-11.4375 25.9063,-13.2344 21.2969,-13.2344 C17.9063,-13.2344 14.2031,-12.2344 10.5938,-10.3438 C4,-6.84375 0,-0.9375 0,4.15625 C0,5.5625 0.296875,6.96875 1,8.26563 C2.79688,11.5781 6.59375,13.2813 11.2031,13.2813 C14.5938,13.2813 18.2969,12.375 21.9063,10.4844 C28.5,6.96875 32.5,1.0625 32.5,-4.04688 C32.5,-5.4375 32.2031,-6.84375 31.5,-8.14063"/>
+        <polyline fill="none" stroke="#000000" stroke-width="2.73" points="387.329,717.888 387.329,634.252"/>
+        <path transform="matrix(0.992126,0,0,0.992126,401.095,721.063)" d="M0,0 C0,2.76563 2.23438,5 5,5 C7.76563,5 10,2.76563 10,0 C10,-2.76563 7.76563,-5 5,-5 C2.23438,-5 0,-2.76563 0,0"/>
+      `, `356 610 90 130`),
+
+      TI_RI: iconWrap(`
+        <path transform="matrix(0.992126,0,0,0.992126,1303.92,696.26)" d="M31.5,-8.09375 C29.7031,-11.4063 25.9063,-13.2031 21.2969,-13.2031 C17.9063,-13.2031 14.2031,-12.2031 10.5938,-10.2969 C4,-6.79688 0,-0.90625 0,4.20313 C0,5.59375 0.296875,7 1,8.29688 C2.79688,11.5938 6.59375,13.2969 11.2031,13.2969 C14.5938,13.2969 18.2969,12.4063 21.9063,10.5 C28.5,7 32.5,1.09375 32.5,-4 C32.5,-5.40625 32.2031,-6.79688 31.5,-8.09375"/>
+        <path transform="matrix(0.992126,0,0,0.992126,1341.12,696.26)" d="M31.5,-8.09375 C29.7031,-11.4063 25.9063,-13.2031 21.2969,-13.2031 C17.9063,-13.2031 14.2031,-12.2031 10.5938,-10.2969 C4,-6.79688 0,-0.90625 0,4.20313 C0,5.59375 0.296875,7 1,8.29688 C2.79688,11.5938 6.59375,13.2969 11.2031,13.2969 C14.5938,13.2969 18.2969,12.4063 21.9063,10.5 C28.5,7 32.5,1.09375 32.5,-4 C32.5,-5.40625 32.2031,-6.79688 31.5,-8.09375"/>
+        <path transform="matrix(0.992126,0,0,0.992126,1378.32,696.26)" d="M31.5,-8.09375 C29.7031,-11.4063 25.9063,-13.2031 21.2969,-13.2031 C17.9063,-13.2031 14.2031,-12.2031 10.5938,-10.2969 C4,-6.79688 0,-0.90625 0,4.20313 C0,5.59375 0.296875,7 1,8.29688 C2.79688,11.5938 6.59375,13.2969 11.2031,13.2969 C14.5938,13.2969 18.2969,12.4063 21.9063,10.5 C28.5,7 32.5,1.09375 32.5,-4 C32.5,-5.40625 32.2031,-6.79688 31.5,-8.09375"/>
+        <path transform="matrix(0.992126,0,0,0.992126,1415.51,696.26)" d="M31.5,-8.09375 C29.7031,-11.4063 25.9063,-13.2031 21.2969,-13.2031 C17.9063,-13.2031 14.2031,-12.2031 10.5938,-10.2969 C4,-6.79688 0,-0.90625 0,4.20313 C0,5.59375 0.296875,7 1,8.29688 C2.79688,11.5938 6.59375,13.2969 11.2031,13.2969 C14.5938,13.2969 18.2969,12.4063 21.9063,10.5 C28.5,7 32.5,1.09375 32.5,-4 C32.5,-5.40625 32.2031,-6.79688 31.5,-8.09375"/>
+        <polyline fill="none" stroke="#000000" stroke-width="2.73" points="1334.79,693.085 1334.79,615.65"/>
+        <polyline fill="none" stroke="#000000" stroke-width="2.73" points="1371.99,693.085 1371.99,615.65"/>
+        <polyline fill="none" stroke="#000000" stroke-width="2.73" points="1409.18,693.085 1409.18,615.65"/>
+        <polyline fill="none" stroke="#000000" stroke-width="2.73" points="1446.38,693.085 1446.38,615.65"/>
+        <path fill-rule="evenodd" d="M1333.42,609.449 L1447.74,609.449 L1447.74,621.85 L1333.42,621.85 L1333.42,609.449 "/>
+        <path fill-rule="evenodd" d="M1333.42,628.051 L1447.74,628.051 L1447.74,640.453 L1333.42,640.453 L1333.42,628.051 "/>
+      `, `1333 610 130 130`),
+
+      DOTTED_8_16: iconWrap(`
+        <path transform="matrix(0.992126,0,0,0.992126,356.457,721.063)" d="M31.5,-8.09375 C29.7031,-11.4063 25.9063,-13.2031 21.2969,-13.2031 C17.9063,-13.2031 14.2031,-12.2031 10.5938,-10.2969 C4,-6.79688 0,-0.90625 0,4.20313 C0,5.59375 0.296875,7 1,8.29688 C2.79688,11.5938 6.59375,13.2969 11.2031,13.2969 C14.5938,13.2969 18.2969,12.4063 21.9063,10.5 C28.5,7 32.5,1.09375 32.5,-4 C32.5,-5.40625 32.2031,-6.79688 31.5,-8.09375"/>
+        <path transform="matrix(0.992126,0,0,0.992126,630.6,721.063)" d="M31.5,-8.09375 C29.7031,-11.4063 25.9063,-13.2031 21.2969,-13.2031 C17.9063,-13.2031 14.2031,-12.2031 10.5938,-10.2969 C4,-6.79688 0,-0.90625 0,4.20313 C0,5.59375 0.296875,7 1,8.29688 C2.79688,11.5938 6.59375,13.2969 11.2031,13.2969 C14.5938,13.2969 18.2969,12.4063 21.9063,10.5 C28.5,7 32.5,1.09375 32.5,-4 C32.5,-5.40625 32.2031,-6.79688 31.5,-8.09375"/>
+        <polyline fill="none" stroke="#000000" stroke-width="2.73" points="387.329,717.888 387.329,640.453"/>
+        <polyline fill="none" stroke="#000000" stroke-width="2.73" points="661.473,717.888 661.473,640.453"/>
+        <path fill-rule="evenodd" d="M385.965,634.252 L662.837,634.252 L662.837,646.654 L385.965,646.654 L385.965,634.252 "/>
+        <path fill-rule="evenodd" d="M662.837,652.854 L630.593,652.854 L630.593,665.256 L662.837,665.256 L662.837,652.854 "/>
+        <path transform="matrix(0.992126,0,0,0.992126,401.095,721.063)" d="M0,0 C0,2.76563 2.23438,5 5,5 C7.76563,5 10,2.76563 10,0 C10,-2.76563 7.76563,-5 5,-5 C2.23438,-5 0,-2.76563 0,0"/>
+      `, `356 610 310 130`),
+
+      DOTTED_Q_8: iconWrap(`
+        <path transform="matrix(0.992126,0,0,0.992126,709.299,696.26)" d="M31.5,-8.09375 C29.7031,-11.4063 25.9063,-13.2031 21.2969,-13.2031 C17.9063,-13.2031 14.2031,-12.2031 10.5938,-10.2969 C4,-6.79688 0,-0.90625 0,4.20313 C0,5.59375 0.296875,7 1,8.29688 C2.79688,11.5938 6.59375,13.2969 11.2031,13.2969 C14.5938,13.2969 18.2969,12.4063 21.9063,10.5 C28.5,7 32.5,1.09375 32.5,-4 C32.5,-5.40625 32.2031,-6.79688 31.5,-8.09375"/>
+        <ellipse cx="724" cy="683.858" rx="16" ry="11" fill="none" stroke="#000" stroke-width="2.73" transform="rotate(-20 724 683.858)"/>
+        <path transform="matrix(0.992126,0,0,0.992126,768.811,696.26)" d="M31.5,-8.09375 C29.7031,-11.4063 25.9063,-13.2031 21.2969,-13.2031 C17.9063,-13.2031 14.2031,-12.2031 10.5938,-10.2969 C4,-6.79688 0,-0.90625 0,4.20313 C0,5.59375 0.296875,7 1,8.29688 C2.79688,11.5938 6.59375,13.2969 11.2031,13.2969 C14.5938,13.2969 18.2969,12.4063 21.9063,10.5 C28.5,7 32.5,1.09375 32.5,-4 C32.5,-5.40625 32.2031,-6.79688 31.5,-8.09375"/>
+        <polyline fill="none" stroke="#000000" stroke-width="2.73" points="740.171,693.085 740.171,615.65"/>
+        <polyline fill="none" stroke="#000000" stroke-width="2.73" points="799.683,693.085 799.683,615.65"/>
+        <path fill-rule="evenodd" d="M738.806,609.449 L801.047,609.449 L801.047,621.85 L738.806,621.85 L738.806,609.449 "/>
+        <path fill-rule="evenodd" d="M801.047,628.051 L768.803,628.051 L768.803,640.453 L801.047,640.453 L801.047,628.051 "/>
+        <path transform="matrix(0.992126,0,0,0.992126,753.936,696.26)" d="M0,0 C0,2.76563 2.23438,5 5,5 C7.76563,5 10,2.76563 10,0 C10,-2.76563 7.76563,-5 5,-5 C2.23438,-5 0,-2.76563 0,0"/>
+      `, `740 610 80 130`),
+
+      TRIPLET_8: iconWrap(`
+        <path transform="matrix(0.992126,0,0,0.992126,2032.1,696.26)" d="M31.5,-8.09375 C29.7031,-11.4063 25.9063,-13.2031 21.2969,-13.2031 C17.9063,-13.2031 14.2031,-12.2031 10.5938,-10.2969 C4,-6.79688 0,-0.90625 0,4.20313 C0,5.59375 0.296875,7 1,8.29688 C2.79688,11.5938 6.59375,13.2969 11.2031,13.2969 C14.5938,13.2969 18.2969,12.4063 21.9063,10.5 C28.5,7 32.5,1.09375 32.5,-4 C32.5,-5.40625 32.2031,-6.79688 31.5,-8.09375"/>
+        <path transform="matrix(0.992126,0,0,0.992126,2069.3,696.26)" d="M31.5,-8.09375 C29.7031,-11.4063 25.9063,-13.2031 21.2969,-13.2031 C17.9063,-13.2031 14.2031,-12.2031 10.5938,-10.2969 C4,-6.79688 0,-0.90625 0,4.20313 C0,5.59375 0.296875,7 1,8.29688 C2.79688,11.5938 6.59375,13.2969 11.2031,13.2969 C14.5938,13.2969 18.2969,12.4063 21.9063,10.5 C28.5,7 32.5,1.09375 32.5,-4 C32.5,-5.40625 32.2031,-6.79688 31.5,-8.09375"/>
+        <path transform="matrix(0.992126,0,0,0.992126,2106.5,696.26)" d="M31.5,-8.09375 C29.7031,-11.4063 25.9063,-13.2031 21.2969,-13.2031 C17.9063,-13.2031 14.2031,-12.2031 10.5938,-10.2969 C4,-6.79688 0,-0.90625 0,4.20313 C0,5.59375 0.296875,7 1,8.29688 C2.79688,11.5938 6.59375,13.2969 11.2031,13.2969 C14.5938,13.2969 18.2969,12.4063 21.9063,10.5 C28.5,7 32.5,1.09375 32.5,-4 C32.5,-5.40625 32.2031,-6.79688 31.5,-8.09375"/>
+        <polyline fill="none" stroke="#000000" stroke-width="2.73" points="2062.98,693.085 2062.98,621.85"/>
+        <polyline fill="none" stroke="#000000" stroke-width="2.73" points="2100.18,693.085 2100.18,621.85"/>
+        <polyline fill="none" stroke="#000000" stroke-width="2.73" points="2137.37,693.085 2137.37,621.85"/>
+        <path fill-rule="evenodd" d="M2061.61,621.85 L2138.73,621.85 L2138.73,634.252 L2061.61,634.252 L2061.61,621.85 "/>
+        <path d="M2103.11,588.607 C2105.23,587.935 2106.08,587.56 2107.15,586.842 C2109.28,585.451 2110.58,582.982 2110.58,580.451 C2110.58,576.185 2107.15,573.31 2102.12,573.31 C2097.22,573.31 2093.08,576.357 2093.08,580.06 C2093.08,581.904 2094.2,583.154 2095.9,583.154 C2097.39,583.154 2098.48,582.076 2098.48,580.592 C2098.48,579.826 2098.25,579.295 2097.53,578.576 C2097.08,578.17 2096.9,577.842 2096.9,577.529 C2096.9,576.451 2099.15,575.326 2101.26,575.326 C2104.28,575.326 2106.08,576.998 2106.08,579.779 C2106.08,583.795 2103.25,587.56 2100.23,587.56 C2100.09,587.56 2099.68,587.529 2099.2,587.482 C2097.89,587.389 2097.89,587.389 2097.62,587.389 C2096.62,587.389 2096.09,587.842 2096.09,588.654 C2096.09,589.373 2096.59,589.81 2097.39,589.81 C2097.62,589.81 2097.93,589.779 2098.29,589.732 C2098.92,589.592 2099.61,589.545 2100,589.545 C2102.12,589.545 2103.56,591.435 2103.56,594.232 C2103.56,596.389 2103.06,598.451 2102.08,600.17 C2100.73,602.592 2098.65,603.764 2095.73,603.764 C2093.22,603.764 2091.04,602.514 2091.04,601.06 C2091.04,600.576 2091.23,600.389 2091.95,600.076 C2093.25,599.498 2093.79,598.685 2093.79,597.467 C2093.79,595.889 2092.53,594.685 2090.92,594.685 C2088.98,594.685 2087.72,596.201 2087.72,598.545 C2087.72,602.92 2091.04,605.654 2096.45,605.654 C2103.25,605.654 2108.42,601.107 2108.42,595.076 C2108.42,593.467 2107.92,592.06 2106.98,590.935 C2105.98,589.779 2105.09,589.232 2103.11,588.607"/>
+      `, `2032 570 160 180`),
+
+      SYNC: iconWrap(`
+        <!-- pikk sünkoop (8 + veerand + 8) + lühike sünkoop (16+8+16) ikoonina -->
+        <path transform="matrix(0.992126,0,0,0.992126,1432.93,721.063)" d="M31.5,-8.09375 C29.7031,-11.4063 25.9063,-13.2031 21.2969,-13.2031 C17.9063,-13.2031 14.2031,-12.2031 10.5938,-10.2969 C4,-6.79688 0,-0.90625 0,4.20313 C0,5.59375 0.296875,7 1,8.29688 C2.79688,11.5938 6.59375,13.2969 11.2031,13.2969 C14.5938,13.2969 18.2969,12.4063 21.9063,10.5 C28.5,7 32.5,1.09375 32.5,-4 C32.5,-5.40625 32.2031,-6.79688 31.5,-8.09375"/>
+        <path transform="matrix(0.992126,0,0,0.992126,1645.26,721.063)" d="M31.5,-8.09375 C29.7031,-11.4063 25.9063,-13.2031 21.2969,-13.2031 C17.9063,-13.2031 14.2031,-12.2031 10.5938,-10.2969 C4,-6.79688 0,-0.90625 0,4.20313 C0,5.59375 0.296875,7 1,8.29688 C2.79688,11.5938 6.59375,13.2969 11.2031,13.2969 C14.5938,13.2969 18.2969,12.4063 21.9063,10.5 C28.5,7 32.5,1.09375 32.5,-4 C32.5,-5.40625 32.2031,-6.79688 31.5,-8.09375"/>
+        <path transform="matrix(0.992126,0,0,0.992126,1985,721.063)" d="M31.5,-8.09375 C29.7031,-11.4063 25.9063,-13.2031 21.2969,-13.2031 C17.9063,-13.2031 14.2031,-12.2031 10.5938,-10.2969 C4,-6.79688 0,-0.90625 0,4.20313 C0,5.59375 0.296875,7 1,8.29688 C2.79688,11.5938 6.59375,13.2969 11.2031,13.2969 C14.5938,13.2969 18.2969,12.4063 21.9063,10.5 C28.5,7 32.5,1.09375 32.5,-4 C32.5,-5.40625 32.2031,-6.79688 31.5,-8.09375"/>
+        <polyline fill="none" stroke="#000000" stroke-width="2.73" points="1463.8,717.888 1463.8,634.252"/>
+        <polyline fill="none" stroke="#000000" stroke-width="2.73" points="1676.13,717.888 1676.13,634.252"/>
+        <polyline fill="none" stroke="#000000" stroke-width="2.73" points="2015.87,717.888 2015.87,634.252"/>
+        <g transform="translate(910,0)">
+          <path transform="matrix(0.992126,0,0,0.992126,2341.19,721.063)" d="M31.5,-8.09375 C29.7031,-11.4063 25.9063,-13.2031 21.2969,-13.2031 C17.9063,-13.2031 14.2031,-12.2031 10.5938,-10.2969 C4,-6.79688 0,-0.90625 0,4.20313 C0,5.59375 0.296875,7 1,8.29688 C2.79688,11.5938 6.59375,13.2969 11.2031,13.2969 C14.5938,13.2969 18.2969,12.4063 21.9063,10.5 C28.5,7 32.5,1.09375 32.5,-4 C32.5,-5.40625 32.2031,-6.79688 31.5,-8.09375"/>
+          <path transform="matrix(0.992126,0,0,0.992126,2458.58,721.063)" d="M31.5,-8.09375 C29.7031,-11.4063 25.9063,-13.2031 21.2969,-13.2031 C17.9063,-13.2031 14.2031,-12.2031 10.5938,-10.2969 C4,-6.79688 0,-0.90625 0,4.20313 C0,5.59375 0.296875,7 1,8.29688 C2.79688,11.5938 6.59375,13.2969 11.2031,13.2969 C14.5938,13.2969 18.2969,12.4063 21.9063,10.5 C28.5,7 32.5,1.09375 32.5,-4 C32.5,-5.40625 32.2031,-6.79688 31.5,-8.09375"/>
+          <path transform="matrix(0.992126,0,0,0.992126,2646.39,721.063)" d="M31.5,-8.09375 C29.7031,-11.4063 25.9063,-13.2031 21.2969,-13.2031 C17.9063,-13.2031 14.2031,-12.2031 10.5938,-10.2969 C4,-6.79688 0,-0.90625 0,4.20313 C0,5.59375 0.296875,7 1,8.29688 C2.79688,11.5938 6.59375,13.2969 11.2031,13.2969 C14.5938,13.2969 18.2969,12.4063 21.9063,10.5 C28.5,7 32.5,1.09375 32.5,-4 C32.5,-5.40625 32.2031,-6.79688 31.5,-8.09375"/>
+          <polyline fill="none" stroke="#000000" stroke-width="2.73" points="2372.07,717.888 2372.07,640.453"/>
+          <polyline fill="none" stroke="#000000" stroke-width="2.73" points="2489.45,717.888 2489.45,640.453"/>
+          <polyline fill="none" stroke="#000000" stroke-width="2.73" points="2677.27,717.888 2677.27,640.453"/>
+          <path fill-rule="evenodd" d="M2370.7,634.252 L2678.63,634.252 L2678.63,646.654 L2370.7,646.654 L2370.7,634.252 "/>
+          <path fill-rule="evenodd" d="M2370.7,652.854 L2402.95,652.854 L2402.95,665.256 L2370.7,665.256 L2370.7,652.854 "/>
+          <path fill-rule="evenodd" d="M2678.63,652.854 L2646.39,652.854 L2646.39,665.256 L2678.63,665.256 L2678.63,652.854 "/>
+        </g>
+      `, `1430 610 600 130`, 120, 40),
+
+      TI_RI_TI: iconWrap(`
+        <path transform="matrix(0.992126,0,0,0.992126,843.204,696.26)" d="M31.5,-8.09375 C29.7031,-11.4063 25.9063,-13.2031 21.2969,-13.2031 C17.9063,-13.2031 14.2031,-12.2031 10.5938,-10.2969 C4,-6.79688 0,-0.90625 0,4.20313 C0,5.59375 0.296875,7 1,8.29688 C2.79688,11.5938 6.59375,13.2969 11.2031,13.2969 C14.5938,13.2969 18.2969,12.4063 21.9063,10.5 C28.5,7 32.5,1.09375 32.5,-4 C32.5,-5.40625 32.2031,-6.79688 31.5,-8.09375"/>
+        <path transform="matrix(0.992126,0,0,0.992126,880.401,696.26)" d="M31.5,-8.09375 C29.7031,-11.4063 25.9063,-13.2031 21.2969,-13.2031 C17.9063,-13.2031 14.2031,-12.2031 10.5938,-10.2969 C4,-6.79688 0,-0.90625 0,4.20313 C0,5.59375 0.296875,7 1,8.29688 C2.79688,11.5938 6.59375,13.2969 11.2031,13.2969 C14.5938,13.2969 18.2969,12.4063 21.9063,10.5 C28.5,7 32.5,1.09375 32.5,-4 C32.5,-5.40625 32.2031,-6.79688 31.5,-8.09375"/>
+        <path transform="matrix(0.992126,0,0,0.992126,925.039,696.26)" d="M0,0 C0,2.76563 2.23438,5 5,5 C7.76563,5 10,2.76563 10,0 C10,-2.76563 7.76563,-5 5,-5 C2.23438,-5 0,-2.76563 0,0"/>
+        <polyline fill="none" stroke="#000000" stroke-width="2.73" points="874.077,693.085 874.077,615.65"/>
+        <polyline fill="none" stroke="#000000" stroke-width="2.73" points="911.274,693.085 911.274,615.65"/>
+        <path fill-rule="evenodd" d="M872.712,609.449 L912.638,609.449 L912.638,621.85 L872.712,621.85 L872.712,609.449 "/>
+        <path fill-rule="evenodd" d="M872.712,628.051 L904.957,628.051 L904.957,640.453 L872.712,640.453 L872.712,628.051 "/>
+      `, `872 610 80 130`),
+
+      TI_TI_RI: iconWrap(`
+        <path transform="matrix(0.992126,0,0,0.992126,1886.82,696.26)" d="M31.5,-8.09375 C29.7031,-11.4063 25.9063,-13.2031 21.2969,-13.2031 C17.9063,-13.2031 14.2031,-12.2031 10.5938,-10.2969 C4,-6.79688 0,-0.90625 0,4.20313 C0,5.59375 0.296875,7 1,8.29688 C2.79688,11.5938 6.59375,13.2969 11.2031,13.2969 C14.5938,13.2969 18.2969,12.4063 21.9063,10.5 C28.5,7 32.5,1.09375 32.5,-4 C32.5,-5.40625 32.2031,-6.79688 31.5,-8.09375"/>
+        <path transform="matrix(0.992126,0,0,0.992126,1953.25,696.26)" d="M31.5,-8.09375 C29.7031,-11.4063 25.9063,-13.2031 21.2969,-13.2031 C17.9063,-13.2031 14.2031,-12.2031 10.5938,-10.2969 C4,-6.79688 0,-0.90625 0,4.20313 C0,5.59375 0.296875,7 1,8.29688 C2.79688,11.5938 6.59375,13.2969 11.2031,13.2969 C14.5938,13.2969 18.2969,12.4063 21.9063,10.5 C28.5,7 32.5,1.09375 32.5,-4 C32.5,-5.40625 32.2031,-6.79688 31.5,-8.09375"/>
+        <path transform="matrix(0.992126,0,0,0.992126,1931.46,696.26)" d="M0,0 C0,2.76563 2.23438,5 5,5 C7.76563,5 10,2.76563 10,0 C10,-2.76563 7.76563,-5 5,-5 C2.23438,-5 0,-2.76563 0,0"/>
+        <polyline fill="none" stroke="#000000" stroke-width="2.73" points="1917.7,693.085 1917.7,615.65"/>
+        <polyline fill="none" stroke="#000000" stroke-width="2.73" points="1984.12,693.085 1984.12,615.65"/>
+      `, `1886 610 110 130`),
+
+      TI_RI_TI_RI: iconWrap(`
+        <path transform="matrix(0.992126,0,0,0.992126,972.861,696.26)" d="M31.5,-8.09375 C29.7031,-11.4063 25.9063,-13.2031 21.2969,-13.2031 C17.9063,-13.2031 14.2031,-12.2031 10.5938,-10.2969 C4,-6.79688 0,-0.90625 0,4.20313 C0,5.59375 0.296875,7 1,8.29688 C2.79688,11.5938 6.59375,13.2969 11.2031,13.2969 C14.5938,13.2969 18.2969,12.4063 21.9063,10.5 C28.5,7 32.5,1.09375 32.5,-4 C32.5,-5.40625 32.2031,-6.79688 31.5,-8.09375"/>
+        <path transform="matrix(0.992126,0,0,0.992126,1014.52,696.26)" d="M31.5,-8.09375 C29.7031,-11.4063 25.9063,-13.2031 21.2969,-13.2031 C17.9063,-13.2031 14.2031,-12.2031 10.5938,-10.2969 C4,-6.79688 0,-0.90625 0,4.20313 C0,5.59375 0.296875,7 1,8.29688 C2.79688,11.5938 6.59375,13.2969 11.2031,13.2969 C14.5938,13.2969 18.2969,12.4063 21.9063,10.5 C28.5,7 32.5,1.09375 32.5,-4 C32.5,-5.40625 32.2031,-6.79688 31.5,-8.09375"/>
+        <path transform="matrix(0.992126,0,0,0.992126,1051.72,696.26)" d="M31.5,-8.09375 C29.7031,-11.4063 25.9063,-13.2031 21.2969,-13.2031 C17.9063,-13.2031 14.2031,-12.2031 10.5938,-10.2969 C4,-6.79688 0,-0.90625 0,4.20313 C0,5.59375 0.296875,7 1,8.29688 C2.79688,11.5938 6.59375,13.2969 11.2031,13.2969 C14.5938,13.2969 18.2969,12.4063 21.9063,10.5 C28.5,7 32.5,1.09375 32.5,-4 C32.5,-5.40625 32.2031,-6.79688 31.5,-8.09375"/>
+        <polyline fill="none" stroke="#000000" stroke-width="2.73" points="1003.73,693.085 1003.73,615.65"/>
+        <polyline fill="none" stroke="#000000" stroke-width="2.73" points="1045.4,693.085 1045.4,615.65"/>
+        <polyline fill="none" stroke="#000000" stroke-width="2.73" points="1082.59,693.085 1082.59,615.65"/>
+        <path fill-rule="evenodd" d="M1002.37,609.449 L1083.96,609.449 L1083.96,621.85 L1002.37,621.85 L1002.37,609.449 "/>
+        <path fill-rule="evenodd" d="M1044.03,628.051 L1083.96,628.051 L1083.96,640.453 L1044.03,640.453 L1044.03,628.051 "/>
+      `, `1003 610 100 130`)
+    };
+
+    // Ühtne rütmide kataloog (UI + loogika ühes kohas)
+    const RHYTHMS = [
+      { id: "tok_ta",      token: "TA",            name: "ta",        hint: "veerand",              iconKey: "TA",          defaultOn: true,  weight: 1 },
+      { id: "tok_titi",    token: "TI_TI",         name: "ti-ti",     hint: "2×kaheksandik",        iconKey: "TI_TI",       defaultOn: true,  weight: 1 },
+      { id: "tok_taaa",    token: "TA_A_A",        name: "ta-a-a",    hint: "täisnoot (4 lööki)",    iconKey: "TA_A_A",      defaultOn: false, weight: 1 },
+      { id: "tok_taai",    token: "TA_A_I",        name: "ta-a-i",    hint: "punkteeritud poolnoot", iconKey: "TA_A_I",     defaultOn: false, weight: 1 },
+      { id: "tok_tiri",    token: "TI_RI",         name: "ti-ri",     hint: "4×16ndik",             iconKey: "TI_RI",       defaultOn: false, weight: 1 },
+      { id: "tok_tairi",   token: "DOTTED_8_16",   name: "tai-ri",    hint: "punkt. 8 + 16",        iconKey: "DOTTED_8_16", defaultOn: false, weight: 1 },
+      { id: "tok_taiti",   token: "DOTTED_Q_8",    name: "ta-i-ti",   hint: "punkt. veerand + 8",   iconKey: "DOTTED_Q_8",  defaultOn: false, weight: 1 },
+      { id: "tok_triplet", token: "TRIPLET_8",     name: "triool",    hint: "3×8ndik",              iconKey: "TRIPLET_8",   defaultOn: false, weight: 1 },
+      // sünkoop on “pakett”: lisab kaks tokenit + kaalustab pikka veidi rohkem
+      { id: "tok_sync",    token: null,            name: "sünkoop",   hint: "lühike + pikk",         iconKey: "SYNC",        defaultOn: false,
+        bundle: [
+          { token: "SYNC_16_8_16", weight: 1 },
+          { token: "SYNC_8_Q_8",   weight: 2 }
+        ]
+      },
+      { id: "tok_tiriti",  token: "TI_RI_TI",      name: "ti-ri-ti",  hint: "16+16+8",              iconKey: "TI_RI_TI",    defaultOn: false, weight: 1 },
+      { id: "tok_titiri",  token: "TI_TI_RI",      name: "ti-ti-ri",  hint: "8+16+16",              iconKey: "TI_TI_RI",    defaultOn: false, weight: 1 },
+      { id: "tok_tiritiri",token: "TI_RI_TI_RI",   name: "ti-ri-ti-ri",hint: "4×16 (2+2)",           iconKey: "TI_RI_TI_RI", defaultOn: false, weight: 1 },
+    ];
+
+    /********************
+     * UI BUILD         *
+     ********************/
+    function buildRhythmGrid() {
+      const grid = document.getElementById("rhythmGrid");
+      grid.innerHTML = "";
+
+      const saved = loadState();
+      const enabledMap = saved.enabledMap || {};
+
+      for (const r of RHYTHMS) {
+        const label = document.createElement("label");
+        label.className = "chk";
+
+        const input = document.createElement("input");
+        input.type = "checkbox";
+        input.id = r.id;
+
+        // default / saved
+        const on = (r.id in enabledMap) ? !!enabledMap[r.id] : !!r.defaultOn;
+        input.checked = on;
+
+        const icon = document.createElement("span");
+        icon.innerHTML = ICONS[r.iconKey] || "";
+        icon.querySelector("svg")?.setAttribute("focusable", "false");
+
+        const meta = document.createElement("span");
+        meta.className = "rhythm-meta";
+        meta.innerHTML = `
+          <span class="rhythm-name">${escapeHtml(r.name)}</span>
+          <span class="rhythm-hint">${escapeHtml(r.hint || "")}</span>
+        `;
+
+        label.appendChild(input);
+        label.appendChild(icon);
+        label.appendChild(meta);
+
+        input.addEventListener("change", () => {
+          const cur = loadState();
+          const nextMap = { ...(cur.enabledMap || {}) };
+          nextMap[r.id] = input.checked;
+          saveState({ enabledMap: nextMap });
+        });
+
+        grid.appendChild(label);
+      }
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => (
+        { "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]
+      ));
+    }
+
+    /********************
+     * CONFIG + GENERATE *
+     ********************/
+    function getConfig() {
+      const enabled = [];
+
+      for (const r of RHYTHMS) {
+        const el = document.getElementById(r.id);
+        if (!el || !el.checked) continue;
+
+        if (r.bundle && Array.isArray(r.bundle)) {
+          for (const b of r.bundle) {
+            const w = Math.max(1, b.weight || 1);
+            for (let i = 0; i < w; i++) enabled.push(b.token);
+          }
+          continue;
+        }
+
+        if (r.token) {
+          const w = Math.max(1, r.weight || 1);
+          for (let i = 0; i < w; i++) enabled.push(r.token);
+        }
+      }
+
+      const includeRests = !!document.getElementById('incl_rests').checked;
+
+      const ts = document.getElementById('timeSig').value;
+      const [numer, denom] = ts.split('/').map(x => parseInt(x, 10));
+
+      const measures = parseInt(document.getElementById('length').value, 10);
+      const numExercises = parseInt(document.getElementById('numExercises').value, 10);
+
+      return { enabled, includeRests, numer, denom, measures, numExercises };
+    }
+
+    function applySavedSettings() {
+      const saved = loadState();
+
+      if (saved.timeSig) document.getElementById("timeSig").value = saved.timeSig;
+      if (saved.length) document.getElementById("length").value = String(saved.length);
+      if (saved.numExercises) document.getElementById("numExercises").value = String(saved.numExercises);
+      if (typeof saved.includeRests === "boolean") document.getElementById("incl_rests").checked = saved.includeRests;
+
+      document.getElementById("timeSig").addEventListener("change", (e) => saveState({ timeSig: e.target.value }));
+      document.getElementById("length").addEventListener("change", (e) => saveState({ length: parseInt(e.target.value, 10) }));
+      document.getElementById("numExercises").addEventListener("change", (e) => saveState({ numExercises: parseInt(e.target.value, 10) }));
+      document.getElementById("incl_rests").addEventListener("change", (e) => saveState({ includeRests: !!e.target.checked }));
     }
 
     function generateMeasure(cfg) {
@@ -325,31 +606,30 @@
 
       const choices = [];
       for (const t of cfg.enabled) {
-        choices.push({ kind: 'note', type: t, dur: DUR[t] });
+        const d = DUR[t] || DUR.TA;
+        choices.push({ kind: 'note', type: t, dur: d });
+
+        // paus sama vältusega kui token (see parandab su varasema TA_A bugi)
         if (cfg.includeRests) {
-          // MVP rests: quarter or half
-          const restDur = (t === 'TA_A') ? DUR.TA_A : DUR.TA;
-          choices.push({ kind: 'rest', type: 'REST', dur: restDur });
+          choices.push({ kind: 'rest', type: 'REST', dur: d });
         }
       }
 
-      if (choices.length === 0) {
-        choices.push({ kind: 'note', type: 'TA', dur: DUR.TA });
-      }
+      if (choices.length === 0) choices.push({ kind: 'note', type: 'TA', dur: DUR.TA });
 
-      for (let guard = 0; guard < 400 && left > 0; guard++) {
+      for (let guard = 0; guard < 500 && left > 0; guard++) {
         const possible = choices.filter(c => c.dur <= left);
         if (possible.length === 0) break;
 
         let next = pick(possible);
 
-        // Do not start measure with rest
+        // Ei alusta takti pausiga
         if (out.length === 0 && next.kind === 'rest') {
           const nonRests = possible.filter(c => c.kind === 'note');
           if (nonRests.length) next = pick(nonRests);
         }
 
-        // Avoid consecutive rests
+        // Ei pane pausid järjest
         const last = out[out.length - 1];
         if (last && last.kind === 'rest' && next.kind === 'rest') {
           const nonRests = possible.filter(c => c.kind === 'note');
@@ -360,7 +640,7 @@
         left -= next.dur;
       }
 
-      // Fill remaining with quarters
+      // Täidame ülejäänud veeranditega (lihtne “turvavõrk”)
       while (left > 0) {
         if (left >= DUR.TA) {
           out.push({ kind: 'note', type: 'TA', dur: DUR.TA });
@@ -379,23 +659,19 @@
       return measures;
     }
 
-    // === SVG RENDER ===
+    /********************
+     * SVG DRAWING       *
+     ********************/
     function svgEl(tag, attrs) {
       const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
-      if (attrs) {
-        for (const k in attrs) el.setAttribute(k, String(attrs[k]));
-      }
+      if (attrs) for (const k in attrs) el.setAttribute(k, String(attrs[k]));
       return el;
     }
 
     function drawNotehead(svg, cx, cy, filled) {
       const e = svgEl('ellipse', {
-        cx: cx,
-        cy: cy,
-        rx: 7.8,
-        ry: 5.7,
-        stroke: '#111',
-        'stroke-width': 1.8,
+        cx, cy, rx: 7.8, ry: 5.7,
+        stroke: '#111', 'stroke-width': 1.8,
         fill: filled ? '#111' : 'none'
       });
       e.setAttribute('transform', 'rotate(-20 ' + cx + ' ' + cy + ')');
@@ -417,65 +693,32 @@
     }
 
     function drawFlag(svg, xStem, yTop, isSixteenth) {
-      // simple single-note flag; good enough for exercises
-
-      const p1 = svgEl('path', {
-        d: 'M ' + (xStem+2) + ' ' + (yTop+2) +
-           ' C ' + (xStem+14) + ' ' + (yTop+6) + ', ' + (xStem+16) + ' ' + (yTop+18) + ', ' + (xStem+4) + ' ' + (yTop+22) +
-           ' C ' + (xStem+12) + ' ' + (yTop+18) + ', ' + (xStem+10) + ' ' + (yTop+10) + ', ' + (xStem+2) + ' ' + (yTop+8) +
+      const mk = (y0) => svgEl('path', {
+        d: 'M ' + (xStem+2) + ' ' + (y0+2) +
+           ' C ' + (xStem+14) + ' ' + (y0+6) + ', ' + (xStem+16) + ' ' + (y0+18) + ', ' + (xStem+4) + ' ' + (y0+22) +
+           ' C ' + (xStem+12) + ' ' + (y0+18) + ', ' + (xStem+10) + ' ' + (y0+10) + ', ' + (xStem+2) + ' ' + (y0+8) +
            ' Z',
         fill: '#111'
       });
-      svg.appendChild(p1);
-
-      if (isSixteenth) {
-        const y2 = yTop + 10;
-        const p2 = svgEl('path', {
-          d: 'M ' + (xStem+2) + ' ' + (y2+2) +
-             ' C ' + (xStem+14) + ' ' + (y2+6) + ', ' + (xStem+16) + ' ' + (y2+18) + ', ' + (xStem+4) + ' ' + (y2+22) +
-             ' C ' + (xStem+12) + ' ' + (y2+18) + ', ' + (xStem+10) + ' ' + (y2+10) + ', ' + (xStem+2) + ' ' + (y2+8) +
-             ' Z',
-          fill: '#111'
-        });
-        svg.appendChild(p2);
-      }
+      svg.appendChild(mk(yTop + 0));
+      if (isSixteenth) svg.appendChild(mk(yTop + 10));
     }
 
-    // Music rest glyphs via codepoints (avoid raw non-ASCII in source)
+    // rests (glyphs)
     const GLYPH_REST_QUARTER = String.fromCodePoint(0x1D13D);
     const GLYPH_REST_EIGHTH = String.fromCodePoint(0x1D13E);
     const GLYPH_REST_SIXTEENTH = String.fromCodePoint(0x1D13F);
 
-    function drawTie(svg, x1, x2, y) {
-      // FIXED: Better tie curve that actually shows up!
-      const mid = (x1 + x2) / 2;
-      const controlY = y - 12; // Control point ABOVE the notes (negative = upward)
-      
-      // Draw the tie as a quadratic bezier curve (filled path)
-      const p = svgEl('path', {
-        d: `M ${x1} ${y} Q ${mid} ${controlY} ${x2} ${y} L ${x2} ${y + 3} Q ${mid} ${controlY + 4} ${x1} ${y + 3} Z`,
-        fill: '#111',
-        stroke: 'none'
-      });
-      svg.appendChild(p);
-    }
-
     function drawRest(svg, cx, cy, durTicks) {
       const xOpt = cx + 6;
 
-      // half rest drawn (with clear top edge)
       if (durTicks >= 48) {
-        const w = 22;
-        const h = 8;
-        const y = cy - 18;
-        svg.appendChild(svgEl('rect', { x: xOpt - w/2, y: y, width: w, height: h, fill: '#111', rx: 2 }));
+        const w = 22, h = 8, y = cy - 18;
+        svg.appendChild(svgEl('rect', { x: xOpt - w/2, y, width: w, height: h, fill: '#111', rx: 2 }));
         svg.appendChild(svgEl('line', {
-          x1: xOpt - (w/2) - 6,
-          y1: y,
-          x2: xOpt + (w/2) + 6,
-          y2: y,
-          stroke: '#111',
-          'stroke-width': 2
+          x1: xOpt - (w/2) - 6, y1: y,
+          x2: xOpt + (w/2) + 6, y2: y,
+          stroke: '#111', 'stroke-width': 2
         }));
         return;
       }
@@ -485,8 +728,7 @@
       if (durTicks === 6) glyph = GLYPH_REST_SIXTEENTH;
 
       const t = svgEl('text', {
-        x: xOpt,
-        y: cy - 10,
+        x: xOpt, y: cy - 10,
         'text-anchor': 'middle',
         'dominant-baseline': 'middle',
         'font-size': 40,
@@ -497,14 +739,12 @@
       svg.appendChild(t);
     }
 
-    function ticksPerBeat() { return TICKS_PER_BEAT; }
-
     function beatGrid(cfg, x0, x1, isLastMeasure) {
       const padL = 4;
       const padR = isLastMeasure ? 18 : 12;
       const innerX0 = x0 + padL;
       const innerX1 = x1 - padR;
-      const beats = cfg.numer;
+      const beats = Math.round(cfg.numer * (4 / cfg.denom));
       const beatW = (innerX1 - innerX0) / beats;
       return { innerX0, innerX1, beatW, beats };
     }
@@ -530,14 +770,88 @@
       svg.appendChild(t);
     }
 
+    // token -> parts
+    function tokenParts(tok, cfgIncludeRests) {
+      if (tok.kind === 'rest') {
+        return [{ kind: 'rest', ticks: tok.dur, optional: true }];
+      }
+
+      switch (tok.type) {
+        case 'TA': return [{ kind: 'note', ticks: DUR.TA }];
+        case 'TA_A_A': return [{ kind: 'note', ticks: DUR.TA_A_A }];
+        case 'TA_A_I': return [{ kind: 'note', ticks: DUR.TA_A_I, dotted: true }];
+
+        case 'TI_TI': return [
+          { kind: 'note', ticks: 12, level: 1 },
+          { kind: 'note', ticks: 12, level: 1 }
+        ];
+
+        case 'TI_RI': return [
+          { kind: 'note', ticks: 6, level: 2 },
+          { kind: 'note', ticks: 6, level: 2 },
+          { kind: 'note', ticks: 6, level: 2 },
+          { kind: 'note', ticks: 6, level: 2 }
+        ];
+
+        case 'DOTTED_8_16': return [
+          { kind: 'note', ticks: 18, dotted: true, level: 1 },
+          { kind: 'note', ticks: 6, level: 2 }
+        ];
+
+        case 'DOTTED_Q_8': return [
+          { kind: 'note', ticks: 36, dotted: true, level: 0 },
+          { kind: 'note', ticks: 12, level: 1, forceFlag: true }
+        ];
+
+        case 'TRIPLET_8': return [
+          { kind: 'note', ticks: 8, level: 1 },
+          { kind: 'note', ticks: 8, level: 1 },
+          { kind: 'note', ticks: 8, level: 1 }
+        ];
+
+        case 'SYNC_16_8_16': return [
+          { kind: 'note', ticks: 6, level: 2 },
+          { kind: 'note', ticks: 12, level: 1 },
+          { kind: 'note', ticks: 6, level: 2 }
+        ];
+
+        case 'SYNC_8_Q_8': return [
+          { kind: 'note', ticks: 12, level: 1, forceFlag: true },
+          { kind: 'note', ticks: 24, level: 0 },
+          { kind: 'note', ticks: 12, level: 1, forceFlag: true }
+        ];
+
+        case 'TI_RI_TI': return [
+          { kind: 'note', ticks: 6, level: 2 },
+          { kind: 'note', ticks: 6, level: 2 },
+          { kind: 'note', ticks: 12, level: 1 }
+        ];
+
+        case 'TI_TI_RI': return [
+          { kind: 'note', ticks: 12, level: 1 },
+          { kind: 'note', ticks: 6, level: 2 },
+          { kind: 'note', ticks: 6, level: 2 }
+        ];
+
+        case 'TI_RI_TI_RI': return [
+          { kind: 'note', ticks: 6, level: 2 },
+          { kind: 'note', ticks: 6, level: 2 },
+          { kind: 'note', ticks: 6, level: 2 },
+          { kind: 'note', ticks: 6, level: 2 }
+        ];
+
+        default:
+          return [{ kind: 'note', ticks: tok.dur }];
+      }
+    }
+
     function renderMultipleExercises(cfg) {
       const paper = document.getElementById('paper');
       paper.innerHTML = '';
-      
+
       const numEx = cfg.numExercises || 1;
-      
+
       for (let exNum = 1; exNum <= numEx; exNum++) {
-        // Create title for each exercise
         const titleDiv = document.createElement('div');
         titleDiv.style.fontSize = '1.2rem';
         titleDiv.style.fontWeight = 'bold';
@@ -545,18 +859,15 @@
         titleDiv.style.marginBottom = '10px';
         titleDiv.textContent = numEx > 1 ? `Harjutus ${exNum}` : '';
         paper.appendChild(titleDiv);
-        
-        // Generate and render exercise
+
         const measures = generateExercise(cfg);
         renderSingleExercise(cfg, measures, paper);
       }
     }
 
     function renderSingleExercise(cfg, measures, container) {
-
       const marginLeft = 58;
       const marginTop = 24;
-
       const rowMeasures = 4;
       const measureW = 320;
       const gap = 16;
@@ -597,15 +908,17 @@
       }
 
       const totalTicks = beatsToTicks(cfg.numer, cfg.denom);
-      const TPB = ticksPerBeat();
+      const TPB = TICKS_PER_BEAT;
 
-      // Larger pads = more inner spacing within groups
-      const PAD_TITI = 6;
-      const PAD_TIRI = 6;
-      const PAD_TRIP = 2;
-      const PAD_DOTTED = 5;
-      const PAD_DOTTED_LONG = 8; // for 2-beat dotted groups
-      const PAD_SYNC = 4;
+      const PAD = {
+        TI_TI: 6,
+        TI_RI: 6,
+        TRIPLET_8: 2,
+        DOTTED_8_16: 5,
+        DOTTED_Q_8: 8,
+        SYNC_16_8_16: 4,
+        SYNC_8_Q_8: 4
+      };
 
       for (let i = 0; i < measures.length; i++) {
         const row = Math.floor(i / rowMeasures);
@@ -615,7 +928,6 @@
         const x0 = marginLeft + col * (measureW + gap);
         const x1 = x0 + measureW;
 
-        // Draw time signature at the start of each row (before the first measure)
         if (col === 0) drawTimeSigAtRow(y0);
 
         const isLast = (i === measures.length - 1);
@@ -633,91 +945,14 @@
           const spanX0 = grid.innerX0 + startBeat * grid.beatW;
           const spanW = spanBeats * grid.beatW;
 
-          // Token -> parts: each part is drawn individually within beat-span.
-          let parts;
-          if (tok.kind === 'rest') {
-            parts = [{ kind: 'rest', ticks: tok.dur, optional: true }];
-          } else if (tok.type === 'TA') {
-            parts = [{ kind: 'note', ticks: DUR.TA }];
-          } else if (tok.type === 'TA_A') {
-            parts = [{ kind: 'note', ticks: DUR.TA_A }];
-          } else if (tok.type === 'TI_TI') {
-            parts = [
-              { kind: 'note', ticks: 12, level: 1 },
-              { kind: 'note', ticks: 12, level: 1 }
-            ];
-          } else if (tok.type === 'TI_RI') {
-            parts = [
-              { kind: 'note', ticks: 6, level: 2 },
-              { kind: 'note', ticks: 6, level: 2 },
-              { kind: 'note', ticks: 6, level: 2 },
-              { kind: 'note', ticks: 6, level: 2 }
-            ];
-          } else if (tok.type === 'DOTTED_8_16') {
-            // tai-ri: dotted 8th + 16th
-            parts = [
-              { kind: 'note', ticks: 18, dotted: true, level: 1 },
-              { kind: 'note', ticks: 6, level: 2 }
-            ];
-          } else if (tok.type === 'DOTTED_Q_8') {
-            // ta-i-ti: dotted quarter + 8th (2 beats)
-            parts = [
-              { kind: 'note', ticks: 36, dotted: true, level: 0 },
-              { kind: 'note', ticks: 12, level: 1, forceFlag: true }
-            ];
-          } else if (tok.type === 'TRIPLET_8') {
-            parts = [
-              { kind: 'note', ticks: 8, level: 1 },
-              { kind: 'note', ticks: 8, level: 1 },
-              { kind: 'note', ticks: 8, level: 1 }
-            ];
-          } else if (tok.type === 'SYNC_OFFBEAT_8') {
-            // Short syncopation (off-beat 8th): (1/8 rest + 1/8 note)
-            parts = [
-              { kind: 'rest', ticks: 12, required: true },
-              { kind: 'note', ticks: 12, level: 1, forceFlag: true }
-            ];
-          } else if (tok.type === 'SYNC_LONG_Q') {
-            // Long syncopation (with rest): (1/8 rest + 1/4 note)
-            parts = [
-              { kind: 'rest', ticks: 12, required: true },
-              { kind: 'note', ticks: 24, level: 0 }
-            ];
-          } else if (tok.type === 'SYNC_8_Q_8') {
-            // Syncopation: 1/8 + 1/4 + 1/8 (2 beats) - all separate with flags
-            parts = [
-              { kind: 'note', ticks: 12, level: 1, forceFlag: true },  // 8th with flag
-              { kind: 'note', ticks: 24, level: 0 },                   // quarter (no flag)
-              { kind: 'note', ticks: 12, level: 1, forceFlag: true }   // 8th with flag
-            ];
-          } else if (tok.type === 'SYNC_16_8_16') {
-            // Short syncopation: 1/16 + 1/8 + 1/16 (beamed)
-            parts = [
-              { kind: 'note', ticks: 6, level: 2 },
-              { kind: 'note', ticks: 12, level: 1 },
-              { kind: 'note', ticks: 6, level: 2 }
-            ];
-          } else {
-            parts = [{ kind: 'note', ticks: tok.dur }];
-          }
+          const parts = tokenParts(tok, cfg.includeRests);
 
-          const pad = (
-            tok.type === 'TI_TI' ? PAD_TITI :
-            tok.type === 'TI_RI' ? PAD_TIRI :
-            tok.type === 'TRIPLET_8' ? PAD_TRIP :
-            tok.type === 'DOTTED_8_16' ? PAD_DOTTED :
-            tok.type === 'DOTTED_Q_8' ? PAD_DOTTED_LONG :
-            tok.type === 'SYNC_OFFBEAT_8' ? PAD_SYNC :
-            tok.type === 'SYNC_8_Q_8' ? PAD_SYNC :
-            6
-          );
-
+          const pad = PAD[tok.type] ?? 6;
           const centers = (parts.length === 1)
             ? [spanX0 + spanW/2]
             : centersFromParts(spanX0, spanW, parts.map(p => p.ticks), pad);
 
           const stemXs = [];
-          const noteCenters = []; // for ties
           const stemTopY = y0 + noteY - stemH;
 
           for (let pi = 0; pi < parts.length; pi++) {
@@ -725,25 +960,23 @@
             const cx = centers[pi];
 
             if (p.kind === 'rest') {
-              // Standalone rests respect cfg.includeRests; syncopation-internal rests are required.
-              if (!p.optional || p.required || cfg.includeRests) {
-                drawRest(svg, cx, y0 + noteY, p.ticks);
-              }
+              if (cfg.includeRests) drawRest(svg, cx, y0 + noteY, p.ticks);
               continue;
             }
 
-            const isHalf = (p.ticks >= 48) || (tok.type === 'TA_A');
-            // Only half notes (48+ ticks) are hollow, everything else is filled
-            const filled = !isHalf;
+            const isHollow = (p.ticks >= 48) || (tok.type === 'TA_A_A') || (tok.type === 'TA_A_I');
+            const filled = !isHollow;
             drawNotehead(svg, cx, y0 + noteY, filled);
-            drawStemUp(svg, cx + 6, y0 + noteY, stemH);
-            stemXs.push(cx + 6);
-            noteCenters.push(cx);
+
+            // täisnoot ilma varreta
+            if (tok.type !== 'TA_A_A') {
+              drawStemUp(svg, cx + 6, y0 + noteY, stemH);
+              stemXs.push(cx + 6);
+            }
 
             if (p.dotted) drawDot(svg, cx + 14, y0 + noteY - 2);
 
-            // Single 8ths created by syncopation or dotted group should have a flag (not beamed)
-            if (p.forceFlag || (tok.type === 'SYNC_OFFBEAT_8' && p.ticks === 12 && parts.length === 2)) {
+            if (p.forceFlag) {
               drawFlag(svg, cx + 6, stemTopY, false);
             }
           }
@@ -753,6 +986,7 @@
             svg.appendChild(svgEl('rect', { x: xA, y: y, width: (xB - xA), height: (thickness || 6), fill: '#111' }));
           }
 
+          // beams / brackets
           if (tok.type === 'TI_TI' && stemXs.length === 2) {
             beamLine(stemXs[0], stemXs[1] + 2, beamY, 6);
           }
@@ -764,44 +998,48 @@
 
           if (tok.type === 'TRIPLET_8' && stemXs.length === 3) {
             beamLine(stemXs[0], stemXs[2] + 2, beamY, 6);
-            const xA = centers[0] - 10;
-            const xB = centers[2] + 10;
-            drawTripletBracket(svg, xA, xB, beamY - 18, '3');
+            drawTripletBracket(svg, centers[0] - 10, centers[2] + 10, beamY - 18, '3');
           }
 
           if (tok.type === 'DOTTED_8_16' && stemXs.length === 2) {
-            // 1st beam spans both notes
             beamLine(stemXs[0], stemXs[1] + 2, beamY, 6);
-            // 2nd beam only on 16th; keep it shorter so it sits inside the dotted figure
             beamLine(stemXs[1] - 10, stemXs[1] + 2, beamY + 9, 6);
           }
 
-          // SYNC_8_Q_8 notes are separate with flags - no beaming needed
-
-          // Ties removed - syncopations don't need ties shown
-          // if (tok.type === 'SYNC_TIE_8_Q' && noteCenters.length === 2) {
-          //   drawTie(svg, noteCenters[0] + 7, noteCenters[1] - 7, y0 + noteY - 18);
-          // }
-
           if (tok.type === 'SYNC_16_8_16' && stemXs.length === 3) {
-            // 8th beam across all three
             beamLine(stemXs[0], stemXs[2] + 2, beamY, 6);
-            // 16th beams on first and last notes (shorter so they stay inside the rhythm figure)
             beamLine(stemXs[0] + 1, stemXs[0] + 7, beamY + 9, 6);
             beamLine(stemXs[2] - 6, stemXs[2] + 2, beamY + 9, 6);
+          }
+
+          if (tok.type === 'TI_RI_TI' && stemXs.length === 3) {
+            beamLine(stemXs[0], stemXs[2] + 2, beamY, 6);
+            beamLine(stemXs[0], stemXs[1] + 2, beamY + 9, 6);
+          }
+
+          if (tok.type === 'TI_TI_RI' && stemXs.length === 3) {
+            beamLine(stemXs[0], stemXs[2] + 2, beamY, 6);
+            beamLine(stemXs[1], stemXs[2] + 2, beamY + 9, 6);
+          }
+
+          if (tok.type === 'TI_RI_TI_RI' && stemXs.length === 4) {
+            beamLine(stemXs[0], stemXs[3] + 2, beamY, 6);
+            beamLine(stemXs[0], stemXs[1] + 2, beamY + 9, 6);
+            beamLine(stemXs[2], stemXs[3] + 2, beamY + 9, 6);
           }
 
           cursor += tok.dur;
         }
 
-        // Basic validation (removed console.assert for browser compatibility)
         if (cursor !== totalTicks) {
-          console.error('Measure tick sum mismatch', { cfg: cfg, i: i, cursor: cursor, totalTicks: totalTicks, tokens: tokens });
+          console.error('Takti ticks ei klapi', { i, cursor, totalTicks });
         }
       }
     }
 
-    // === TESTS ===
+    /********************
+     * ERROR UI          *
+     ********************/
     function formatErrorText(err) {
       const msg = (err && err.message) ? err.message : String(err);
       const stack = (err && err.stack) ? err.stack : '';
@@ -819,11 +1057,9 @@
       paper.appendChild(pre);
     }
 
-    function runTests() {
-      // Tests removed for browser compatibility
-      // Basic validation still happens during generation
-    }
-
+    /********************
+     * MAIN             *
+     ********************/
     let lastCfg = null;
 
     function generateAndRender() {
@@ -851,17 +1087,23 @@
       window.print();
     }
 
-    document.getElementById('btnGen').addEventListener('click', (e) => { e.preventDefault(); generateAndRender(); });
-    document.getElementById('btnAgain').addEventListener('click', (e) => { e.preventDefault(); again(); });
-    document.getElementById('btnPrint').addEventListener('click', (e) => { e.preventDefault(); printPage(); });
+    function init() {
+      buildRhythmGrid();
+      applySavedSettings();
 
-    window.addEventListener('error', (e) => {
-      try { showError(e && e.error ? e.error : e); } catch (_) {}
-    });
+      document.getElementById('btnGen').addEventListener('click', (e) => { e.preventDefault(); generateAndRender(); });
+      document.getElementById('btnAgain').addEventListener('click', (e) => { e.preventDefault(); again(); });
+      document.getElementById('btnPrint').addEventListener('click', (e) => { e.preventDefault(); printPage(); });
 
-    try { runTests(); } catch (err) { console.error(err); showError(err); }
-    generateAndRender();
+      window.addEventListener('error', (e) => {
+        try { showError(e && e.error ? e.error : e); } catch (_) {}
+      });
+
+      // render immediately
+      generateAndRender();
+    }
+
+    init();
   </script>
-
 </body>
 </html>
