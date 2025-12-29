@@ -755,10 +755,10 @@
       const TPB = TICKS_PER_BEAT;
 
       const PAD_TITI = 6;
-      const PAD_TIRI = 6;
+      const PAD_TIRI = 8;   // 16th noodid - suurem vahe paremaks loetavuseks
       const PAD_TRIP = 2;
       const PAD_DOTTED = 5;
-      const PAD_SYNC = 4;
+      const PAD_SYNC = 5;   // sünkoobid - veidi suurem vahe
 
       for (let i = 0; i < measures.length; i++) {
         const row = Math.floor(i / rowMeasures);
@@ -940,9 +940,8 @@
           }
 
           if (tok.type === 'TI_RI_TI_RI' && stemXs.length === 4) {
-            beamLine(stemXs[0], stemXs[3] + 2, beamY, 6);
-            beamLine(stemXs[0], stemXs[1] + 2, beamY + 9, 6);
-            beamLine(stemXs[2], stemXs[3] + 2, beamY + 9, 6);
+            beamLine(stemXs[0], stemXs[3] + 2, beamY, 6);      // ülemine beam
+            beamLine(stemXs[0], stemXs[3] + 2, beamY + 9, 6);  // alumine beam (16th)
           }
 
           cursor += tok.dur;
