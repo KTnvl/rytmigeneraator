@@ -1002,12 +1002,12 @@
     document.getElementById('btnAgain').addEventListener('click', (e) => { e.preventDefault(); again(); });
     document.getElementById('btnPrint').addEventListener('click', (e) => { e.preventDefault(); printPage(); });
     
-    // Kontrollide peitmise toggle
+    // Kontrollide peitmise ja täisekraani toggle
     const btnToggle = document.getElementById('btnToggleUI');
     const layout = document.querySelector('.layout');
     let controlsHidden = false;
     
-    btnToggle.addEventListener('click', (e) => {
+    btnToggle.addEventListener('click', async (e) => {
       e.preventDefault();
       controlsHidden = !controlsHidden;
       
@@ -1017,7 +1017,37 @@
         btnToggle.textContent = '⚙️ Näita kontrolle';
         btnToggle.classList.remove('ghost');
         btnToggle.classList.add('primary');
+        
+        // Proovi minna täisekraani
+        try {
+          if (document.documentElement.requestFullscreen) {
+            await document.documentElement.requestFullscreen();
+          }
+        } catch (err) {
+          console.log('Täisekraan ei õnnestunud:', err);
+        }
       } else {
+        layout.classList.remove('controls-hidden');
+        document.body.classList.remove('controls-hidden');
+        btnToggle.textContent = '⚙️ Peida kontrollid';
+        btnToggle.classList.remove('primary');
+        btnToggle.classList.add('ghost');
+        
+        // Välju täisekraanist
+        try {
+          if (document.fullscreenElement && document.exitFullscreen) {
+            await document.exitFullscreen();
+          }
+        } catch (err) {
+          console.log('Täisekraanist väljumine ei õnnestunud:', err);
+        }
+      }
+    });
+    
+    // Kui kasutaja vajutab ESC täisekraanist väljumiseks, taasta ka kontrollid
+    document.addEventListener('fullscreenchange', () => {
+      if (!document.fullscreenElement && controlsHidden) {
+        controlsHidden = false;
         layout.classList.remove('controls-hidden');
         document.body.classList.remove('controls-hidden');
         btnToggle.textContent = '⚙️ Peida kontrollid';
