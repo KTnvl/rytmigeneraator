@@ -74,17 +74,23 @@
       grid-template-columns: 1fr;
     }
 
+    /* Peidame ka headeri, kui kontrollid on peidetud */
+    .controls-hidden header > div {
+      display: none;
+    }
+
+    /* Nupp on tavaliselt headeris */
     #btnToggleUI {
+      white-space: nowrap;
+    }
+
+    /* Kui kontrollid on peidetud, liigub nupp fixed positsioonile */
+    .controls-hidden #btnToggleUI {
       position: fixed;
       bottom: 20px;
       right: 20px;
       z-index: 100;
-      display: none;
       box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    }
-
-    .layout.controls-hidden #btnToggleUI {
-      display: block;
     }
 
     .card {
@@ -215,6 +221,7 @@
       <h1>Rütmiharjutuste generaator (beeta)</h1>
       <div class="tagline">Vali rütmid, taktimõõt ja pikkus – siis genereeri uus harjutus.</div>
     </div>
+    <button id="btnToggleUI" type="button" class="ghost" style="align-self: flex-start;">⚙️ Peida kontrollid</button>
   </header>
 
   <div class="layout">
@@ -423,7 +430,6 @@
         <button id="btnGen" type="button">Genereeri</button>
         <button id="btnAgain" type="button" class="secondary">Uuesti</button>
         <button id="btnPrint" type="button" class="ghost">Print</button>
-        <button id="btnToggleUI" type="button" class="ghost">⚙️ Peida kontrollid</button>
       </div>
 
       <div class="small">Nipp: kui midagi ei uuene, tee värskendus (Ctrl+Shift+R / Cmd+Shift+R).</div>
@@ -1007,11 +1013,13 @@
       
       if (controlsHidden) {
         layout.classList.add('controls-hidden');
+        document.body.classList.add('controls-hidden');
         btnToggle.textContent = '⚙️ Näita kontrolle';
         btnToggle.classList.remove('ghost');
         btnToggle.classList.add('primary');
       } else {
         layout.classList.remove('controls-hidden');
+        document.body.classList.remove('controls-hidden');
         btnToggle.textContent = '⚙️ Peida kontrollid';
         btnToggle.classList.remove('primary');
         btnToggle.classList.add('ghost');
