@@ -407,6 +407,11 @@
         </label>
       </div>
 
+      <!-- Vali kõik nupp -->
+      <div style="margin-bottom: 12px;">
+        <button type="button" id="btnSelectAll" class="secondary" style="width: 100%; font-size: 0.9rem;">✓ Vali kõik</button>
+      </div>
+
       <label class="chk" style="margin-bottom: 12px;">
         <input type="checkbox" id="incl_rests" checked /> Lisa pausid (vastavad vältused)
       </label>
@@ -1051,6 +1056,20 @@
     document.getElementById('btnAgain').addEventListener('click', (e) => { e.preventDefault(); again(); });
     document.getElementById('btnPrint').addEventListener('click', (e) => { e.preventDefault(); printPage(); });
     
+    // Vali kõik nupp
+    document.getElementById('btnSelectAll').addEventListener('click', (e) => {
+      e.preventDefault();
+      const allChecked = document.querySelectorAll('.grid input[type="checkbox"]');
+      const anyUnchecked = Array.from(allChecked).some(cb => !cb.checked);
+      
+      allChecked.forEach(cb => {
+        cb.checked = anyUnchecked;
+      });
+      
+      // Muuda nupu teksti
+      e.target.textContent = anyUnchecked ? '✗ Tühista valik' : '✓ Vali kõik';
+    });
+    
     // Kontrollide peitmise ja täisekraani toggle
     const btnToggle = document.getElementById('btnToggleUI');
     const layout = document.querySelector('.layout');
@@ -1125,11 +1144,10 @@
     function schedulePlayback() {
       if (!currentExerciseData || !isPlaying) return;
 
-      const tempo = parseInt(document.getElementById('tempoSlider').value);
-      const beatDuration = 60 / tempo;
       const currentTime = audioContext.currentTime;
-      const scheduleAhead = 0.1;
+      const scheduleAhead = 0.2; // Suurem buffer stabiilsuse jaoks
 
+      // Ajakava järgmised noodid
       while (currentNoteIndex < scheduledNotes.length &&
              scheduledNotes[currentNoteIndex].time < currentTime + scheduleAhead) {
         const note = scheduledNotes[currentNoteIndex];
@@ -1137,10 +1155,9 @@
         currentNoteIndex++;
       }
 
-      if (currentNoteIndex < scheduledNotes.length) {
-        setTimeout(() => {
-          if (isPlaying) schedulePlayback();
-        }, 25);
+      // Kui on veel noote, jätka
+      if (currentNoteIndex < scheduledNotes.length && isPlaying) {
+        requestAnimationFrame(schedulePlayback);
       } else {
         stopPlayback();
       }
@@ -1160,25 +1177,25 @@
 
       const tempo = parseInt(document.getElementById('tempoSlider').value);
       const beatDuration = 60 / tempo;
-      const sixteenthDuration = beatDuration / 4;
+      const ticksPerBeat = TICKS_PER_BEAT;
 
-      // Loo noodi jadastus koos metroonomi tiksuritega
+      // Loo metroonomi jadastus - tikk iga LÖÖK kohta
       scheduledNotes = [];
-      let time = audioContext.currentTime;
+      let time = audioContext.currentTime + 0.1; // Väike delay
 
-      // Loome metroonomi tiku iga noodi kohta
       currentExerciseData.forEach((measure) => {
-        let tickInBar = 0;
         const beatsPerBar = currentExerciseConfig.numer;
-        const ticksPerBeat = TICKS_PER_BEAT;
+        let currentBeat = 0;
         
-        measure.forEach((token) => {
-          // Aktsent esimesel löögil
-          const accent = (tickInBar % (ticksPerBeat * beatsPerBar)) === 0;
-          scheduledNotes.push({ time, accent, tick: tickInBar });
-          time += (token.dur / ticksPerBeat) * beatDuration;
-          tickInBar += token.dur;
-        });
+        // Lisa tikk iga löök (veerandnoot) kohta
+        for (let beat = 0; beat < beatsPerBar; beat++) {
+          const accent = (beat === 0); // Aktsent esimesel löögil
+          scheduledNotes.push({ time: time + (beat * beatDuration), accent });
+        }
+        
+        // Arvuta takti kogupikkus
+        const measureDuration = measure.reduce((sum, token) => sum + token.dur, 0);
+        time += (measureDuration / ticksPerBeat) * beatDuration;
       });
 
       currentNoteIndex = 0;
