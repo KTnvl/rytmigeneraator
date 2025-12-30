@@ -93,6 +93,11 @@
       box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     }
 
+    /* Peida esituse kontrollid täisekraanis kui checkbox pole märgitud */
+    body.controls-hidden #playbackControls.hidden-in-fullscreen {
+      display: none !important;
+    }
+
     .card {
       background: var(--card);
       border: 1px solid var(--border);
@@ -464,14 +469,20 @@
   </div>
 
   <!-- Playback kontrollid - alati nähtavad fixed position -->
-  <div id="playbackControls" style="position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); margin-left: 80px; z-index: 200; background: var(--card); border: 1px solid var(--border); border-radius: 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.15); padding: 12px 16px; display: flex; align-items: center; gap: 12px; max-width: 600px; width: calc(100% - 40px);">
-    <button id="btnPlay" type="button" style="background: linear-gradient(135deg, #10b981, #059669); font-size: 0.9rem; padding: 8px 16px; border: 0; border-radius: 10px; color: white; cursor: pointer; white-space: nowrap; transition: transform 0.12s;">▶ Mängi</button>
-    <button id="btnStop" type="button" style="background: rgba(255,255,255,0.75); color: #111827; border: 1px solid var(--border); font-size: 0.9rem; padding: 8px 16px; border-radius: 10px; cursor: pointer; white-space: nowrap; transition: transform 0.12s;">⏹ Peata</button>
-    <div style="flex: 1; display: flex; align-items: center; gap: 8px; min-width: 0;">
-      <label for="tempoSlider" style="font-size: 0.85rem; white-space: nowrap;">Tempo:</label>
-      <input type="range" id="tempoSlider" min="40" max="200" value="120" step="1" style="flex: 1; min-width: 80px;">
-      <span style="font-weight: 600; color: var(--accent); font-size: 0.85rem; white-space: nowrap;"><span id="tempoValue">120</span> BPM</span>
+  <div id="playbackControls" style="position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); margin-left: 80px; z-index: 200; background: var(--card); border: 1px solid var(--border); border-radius: 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.15); padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; max-width: 600px; width: calc(100% - 40px);">
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <button id="btnPlay" type="button" style="background: linear-gradient(135deg, #10b981, #059669); font-size: 0.9rem; padding: 8px 16px; border: 0; border-radius: 10px; color: white; cursor: pointer; white-space: nowrap; transition: transform 0.12s;">▶ Mängi</button>
+      <button id="btnStop" type="button" style="background: rgba(255,255,255,0.75); color: #111827; border: 1px solid var(--border); font-size: 0.9rem; padding: 8px 16px; border-radius: 10px; cursor: pointer; white-space: nowrap; transition: transform 0.12s;">⏹ Peata</button>
+      <div style="flex: 1; display: flex; align-items: center; gap: 8px; min-width: 0;">
+        <label for="tempoSlider" style="font-size: 0.85rem; white-space: nowrap;">Tempo:</label>
+        <input type="range" id="tempoSlider" min="40" max="200" value="120" step="1" style="flex: 1; min-width: 80px;">
+        <span style="font-weight: 600; color: var(--accent); font-size: 0.85rem; white-space: nowrap;"><span id="tempoValue">120</span> BPM</span>
+      </div>
     </div>
+    <label style="display: flex; align-items: center; gap: 6px; font-size: 0.85rem; cursor: pointer; user-select: none;">
+      <input type="checkbox" id="showPlaybackInFullscreen" checked style="cursor: pointer;">
+      <span>Näita esitust täisvaates</span>
+    </label>
   </div>
 
   <script>
@@ -1219,6 +1230,16 @@
     
     document.getElementById('tempoSlider').addEventListener('input', (e) => {
       document.getElementById('tempoValue').textContent = e.target.value;
+    });
+
+    // Esituse nähtavuse kontroll täisekraanis
+    document.getElementById('showPlaybackInFullscreen').addEventListener('change', (e) => {
+      const playbackControls = document.getElementById('playbackControls');
+      if (e.target.checked) {
+        playbackControls.classList.remove('hidden-in-fullscreen');
+      } else {
+        playbackControls.classList.add('hidden-in-fullscreen');
+      }
     });
 
     let currentExerciseConfig = null;
