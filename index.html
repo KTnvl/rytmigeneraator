@@ -214,11 +214,204 @@
       color: var(--muted);
     }
 
+    /* LOGIN SCREEN */
+    #loginOverlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: radial-gradient(1200px 500px at 10% 0%, #eef2ff 0%, var(--bg) 55%, #fff7ed 120%);
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #loginOverlay.hidden { display: none; }
+
+    .login-box {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      box-shadow: 0 20px 50px rgba(17, 24, 39, 0.12);
+      padding: 36px 32px;
+      max-width: 400px;
+      width: 90%;
+      text-align: center;
+    }
+
+    .login-box h1 {
+      font-size: 1.5rem;
+      margin: 0 0 6px;
+    }
+
+    .login-box .tagline {
+      font-size: 0.9rem;
+      margin-bottom: 20px;
+    }
+
+    .login-box input[type="text"] {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      font-size: 1rem;
+      margin-bottom: 12px;
+      box-sizing: border-box;
+      text-align: center;
+      letter-spacing: 0.05em;
+    }
+
+    .login-box input[type="text"]:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+    }
+
+    .login-box .login-btn {
+      width: 100%;
+      padding: 12px;
+      font-size: 1rem;
+      margin-bottom: 8px;
+    }
+
+    .login-box .demo-btn {
+      width: 100%;
+      padding: 10px;
+      font-size: 0.95rem;
+      background: rgba(255,255,255,0.75);
+      color: #111827;
+      border: 1px solid var(--border);
+      box-shadow: none;
+    }
+
+    .login-box .demo-hint {
+      margin-top: 10px;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+
+    .login-error {
+      color: #dc2626;
+      font-size: 0.9rem;
+      margin-bottom: 8px;
+      min-height: 1.2em;
+    }
+
+    /* SESSION BAR */
+    #sessionBar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 8px 12px;
+      background: rgba(255,255,255,0.7);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      margin-bottom: 10px;
+      font-size: 0.9rem;
+    }
+
+    #sessionBar .session-info {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+    }
+
+    #sessionBar .session-info strong {
+      color: var(--ink);
+    }
+
+    .demo-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 8px;
+      background: #fef3c7;
+      color: #92400e;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+
+    .demo-counter {
+      font-size: 0.85rem;
+      color: #92400e;
+    }
+
+    /* RESULTS PANEL */
+    #resultsPanel {
+      margin-top: 14px;
+      border-top: 1px solid var(--border);
+      padding-top: 12px;
+    }
+
+    #resultsPanel.hidden { display: none; }
+
+    .results-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .results-header h2 {
+      margin: 0;
+      font-size: 1rem;
+    }
+
+    .result-item {
+      padding: 8px 10px;
+      background: rgba(255,255,255,0.6);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      margin-bottom: 6px;
+      font-size: 0.85rem;
+    }
+
+    .result-item .result-time {
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+
+    .result-item .result-details {
+      margin-top: 2px;
+    }
+
+    #btnCopyResults {
+      font-size: 0.85rem;
+      padding: 6px 12px;
+    }
+
+    #btnClearResults {
+      font-size: 0.85rem;
+      padding: 6px 12px;
+      background: rgba(255,255,255,0.75);
+      color: #111827;
+      border: 1px solid var(--border);
+      box-shadow: none;
+    }
+
+    .copy-toast {
+      position: fixed;
+      bottom: 100px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #111827;
+      color: white;
+      padding: 10px 20px;
+      border-radius: 12px;
+      font-size: 0.9rem;
+      z-index: 10000;
+      opacity: 0;
+      transition: opacity 0.3s;
+      pointer-events: none;
+    }
+
+    .copy-toast.show { opacity: 1; }
+
     /* PRINT */
     @media print {
       @page { margin: 12mm; }
       body { background: white; margin: 0; max-width: none; padding: 0; }
-      header, .controls, #playbackControls { display: none !important; }
+      header, .controls, #playbackControls, #loginOverlay, #sessionBar, .copy-toast { display: none !important; }
       .card { box-shadow: none; border: 0; padding: 0; }
       .layout { grid-template-columns: 1fr; }
       #paper { overflow: visible; }
@@ -229,6 +422,22 @@
 </head>
 <body>
 
+  <!-- LOGIN OVERLAY -->
+  <div id="loginOverlay">
+    <div class="login-box">
+      <h1>Rütmiharjutuste generaator</h1>
+      <div class="tagline">Sisesta koolikood, et alustada</div>
+      <div class="login-error" id="loginError"></div>
+      <input type="text" id="loginCode" placeholder="Koolikood" autocomplete="off" />
+      <button type="button" class="login-btn" id="btnLogin">Sisene</button>
+      <button type="button" class="demo-btn" id="btnDemo">Proovi demo (3 harjutust)</button>
+      <div class="demo-hint">Demo režiimis saad genereerida kuni 3 harjutust</div>
+    </div>
+  </div>
+
+  <!-- COPY TOAST -->
+  <div class="copy-toast" id="copyToast">Tulemused kopeeritud!</div>
+
   <header>
     <div>
       <h1>Rütmiharjutuste generaator (beeta)</h1>
@@ -236,6 +445,14 @@
     </div>
     <button id="btnToggleUI" type="button" class="ghost" style="align-self: flex-start;">⚙️ Peida kontrollid</button>
   </header>
+
+  <!-- SESSION BAR -->
+  <div id="sessionBar" style="display: none;">
+    <div class="session-info">
+      <span id="sessionUser"></span>
+    </div>
+    <button type="button" id="btnLogout" class="ghost" style="font-size: 0.85rem; padding: 6px 12px;">Logi välja</button>
+  </div>
 
   <div class="layout">
 
@@ -460,6 +677,18 @@
       </div>
 
       <div class="small">Nipp: kui midagi ei uuene, tee värskendus (Ctrl+Shift+R / Cmd+Shift+R).</div>
+
+      <!-- RESULTS PANEL -->
+      <div id="resultsPanel" class="hidden">
+        <div class="results-header">
+          <h2>Tulemused</h2>
+          <div style="display: flex; gap: 6px;">
+            <button type="button" id="btnCopyResults">Kopeeri</button>
+            <button type="button" id="btnClearResults">Tühjenda</button>
+          </div>
+        </div>
+        <div id="resultsList"></div>
+      </div>
     </section>
 
     <section class="card paper">
@@ -486,6 +715,228 @@
   </div>
 
   <script>
+    // === SESSION MANAGEMENT ===
+    let sessionMode = null;   // 'login' | 'demo' | null
+    let sessionCode = '';
+    let demoCount = 0;
+    const DEMO_LIMIT = 3;
+    let savedResults = [];
+
+    function initSession() {
+      const stored = sessionStorage.getItem('rg_session');
+      if (stored) {
+        try {
+          const data = JSON.parse(stored);
+          sessionMode = data.mode;
+          sessionCode = data.code || '';
+          demoCount = data.demoCount || 0;
+          savedResults = data.results || [];
+          showApp();
+          return;
+        } catch (e) { /* ignore */ }
+      }
+      showLogin();
+    }
+
+    function saveSession() {
+      sessionStorage.setItem('rg_session', JSON.stringify({
+        mode: sessionMode,
+        code: sessionCode,
+        demoCount: demoCount,
+        results: savedResults
+      }));
+    }
+
+    function showLogin() {
+      document.getElementById('loginOverlay').classList.remove('hidden');
+    }
+
+    function showApp() {
+      document.getElementById('loginOverlay').classList.add('hidden');
+      const bar = document.getElementById('sessionBar');
+      bar.style.display = 'flex';
+
+      const userEl = document.getElementById('sessionUser');
+      if (sessionMode === 'demo') {
+        userEl.innerHTML = '<span class="demo-badge">DEMO</span> <span class="demo-counter">Harjutusi jäänud: ' + (DEMO_LIMIT - demoCount) + ' / ' + DEMO_LIMIT + '</span>';
+      } else {
+        userEl.innerHTML = 'Koolikood: <strong>' + escapeHtml(sessionCode) + '</strong>';
+      }
+
+      updateResultsPanel();
+    }
+
+    function escapeHtml(str) {
+      const d = document.createElement('div');
+      d.textContent = str;
+      return d.innerHTML;
+    }
+
+    function handleLogin() {
+      const code = document.getElementById('loginCode').value.trim();
+      if (!code) {
+        document.getElementById('loginError').textContent = 'Palun sisesta koolikood';
+        return;
+      }
+      sessionMode = 'login';
+      sessionCode = code;
+      demoCount = 0;
+      savedResults = [];
+      saveSession();
+      showApp();
+      generateAndRender();
+    }
+
+    function handleDemo() {
+      sessionMode = 'demo';
+      sessionCode = '';
+      demoCount = 0;
+      savedResults = [];
+      saveSession();
+      showApp();
+      generateAndRender();
+    }
+
+    function handleLogout() {
+      sessionStorage.removeItem('rg_session');
+      sessionMode = null;
+      sessionCode = '';
+      demoCount = 0;
+      savedResults = [];
+      document.getElementById('loginCode').value = '';
+      document.getElementById('loginError').textContent = '';
+      document.getElementById('sessionBar').style.display = 'none';
+      document.getElementById('paper').innerHTML = '';
+      showLogin();
+    }
+
+    function canGenerate() {
+      if (sessionMode === 'demo' && demoCount >= DEMO_LIMIT) {
+        return false;
+      }
+      return true;
+    }
+
+    function incrementDemoCount() {
+      if (sessionMode === 'demo') {
+        demoCount++;
+        saveSession();
+        const userEl = document.getElementById('sessionUser');
+        userEl.innerHTML = '<span class="demo-badge">DEMO</span> <span class="demo-counter">Harjutusi jäänud: ' + (DEMO_LIMIT - demoCount) + ' / ' + DEMO_LIMIT + '</span>';
+      }
+    }
+
+    // === RESULTS MANAGEMENT ===
+    function saveResult(cfg) {
+      const rhythmNames = {
+        'TA': 'ta', 'TA_A': 'ta-a', 'TI_TI': 'ti-ti', 'TI_RI': 'ti-ri',
+        'TA_A_A': 'ta-a-a', 'TA_A_I': 'ta-a-i', 'DOTTED_8_16': 'tai-ri',
+        'TRIPLET_8': 'triool', 'SYNC_8_Q_8': 'sünkoop (pikk)',
+        'SYNC_16_8_16': 'sünkoop (lühike)', 'TI_RI_TI': 'ti-ri-ti',
+        'TI_TI_RI': 'ti-ti-ri', 'TI_RI_TI_RI': 'ti-ri-ti-ri'
+      };
+
+      const uniqueRhythms = [...new Set(cfg.enabled)];
+      const rhythmLabels = uniqueRhythms.map(r => rhythmNames[r] || r).join(', ');
+
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString('et-EE', { hour: '2-digit', minute: '2-digit' });
+      const dateStr = now.toLocaleDateString('et-EE');
+
+      savedResults.push({
+        date: dateStr,
+        time: timeStr,
+        timeSig: cfg.numer + '/' + cfg.denom,
+        measures: cfg.measures,
+        numExercises: cfg.numExercises,
+        rhythms: rhythmLabels,
+        rests: cfg.includeRests
+      });
+
+      saveSession();
+      updateResultsPanel();
+    }
+
+    function updateResultsPanel() {
+      const panel = document.getElementById('resultsPanel');
+      const list = document.getElementById('resultsList');
+
+      if (savedResults.length === 0) {
+        panel.classList.add('hidden');
+        return;
+      }
+
+      panel.classList.remove('hidden');
+      list.innerHTML = '';
+
+      for (let i = savedResults.length - 1; i >= 0; i--) {
+        const r = savedResults[i];
+        const item = document.createElement('div');
+        item.className = 'result-item';
+        item.innerHTML =
+          '<div class="result-time">' + escapeHtml(r.date) + ' ' + escapeHtml(r.time) + '</div>' +
+          '<div class="result-details">' +
+            '<strong>' + escapeHtml(r.timeSig) + '</strong>, ' +
+            r.measures + ' takti, ' +
+            r.numExercises + ' harj.' +
+            (r.rests ? ' + pausid' : '') +
+            '<br><span style="color: var(--muted);">' + escapeHtml(r.rhythms) + '</span>' +
+          '</div>';
+        list.appendChild(item);
+      }
+    }
+
+    function copyResults() {
+      if (savedResults.length === 0) return;
+
+      let text = 'RÜTMIHARJUTUSTE TULEMUSED\n';
+      text += '========================\n';
+      if (sessionMode === 'login') {
+        text += 'Koolikood: ' + sessionCode + '\n';
+      } else {
+        text += 'Režiim: Demo\n';
+      }
+      text += 'Kuupäev: ' + new Date().toLocaleDateString('et-EE') + '\n\n';
+
+      savedResults.forEach((r, idx) => {
+        text += (idx + 1) + '. ' + r.date + ' ' + r.time + '\n';
+        text += '   Taktimõõt: ' + r.timeSig + ', ' + r.measures + ' takti, ' + r.numExercises + ' harjutus(t)\n';
+        text += '   Rütmid: ' + r.rhythms + '\n';
+        if (r.rests) text += '   Pausid: jah\n';
+        text += '\n';
+      });
+
+      text += 'Kokku: ' + savedResults.length + ' genereerimist\n';
+
+      navigator.clipboard.writeText(text).then(() => {
+        showToast('Tulemused kopeeritud!');
+      }).catch(() => {
+        // Fallback
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        showToast('Tulemused kopeeritud!');
+      });
+    }
+
+    function clearResults() {
+      savedResults = [];
+      saveSession();
+      updateResultsPanel();
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('copyToast');
+      toast.textContent = msg;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2000);
+    }
+
     // === UNIT SYSTEM ===
     const TICKS_PER_BEAT = 24;
 
@@ -1038,10 +1489,16 @@
 
     function generateAndRender() {
       try {
+        if (!canGenerate()) {
+          showDemoLimitMessage();
+          return;
+        }
         stopPlayback();
         const cfg = getConfig();
         lastCfg = cfg;
         renderMultipleExercises(cfg);
+        incrementDemoCount();
+        saveResult(cfg);
       } catch (err) {
         console.error(err);
         showError(err);
@@ -1050,13 +1507,32 @@
 
     function again() {
       try {
+        if (!canGenerate()) {
+          showDemoLimitMessage();
+          return;
+        }
         stopPlayback();
         if (!lastCfg) return generateAndRender();
         renderMultipleExercises(lastCfg);
+        incrementDemoCount();
+        saveResult(lastCfg);
       } catch (err) {
         console.error(err);
         showError(err);
       }
+    }
+
+    function showDemoLimitMessage() {
+      const paper = document.getElementById('paper');
+      paper.innerHTML = '';
+      const msg = document.createElement('div');
+      msg.style.textAlign = 'center';
+      msg.style.padding = '40px 20px';
+      msg.innerHTML =
+        '<div style="font-size: 1.3rem; font-weight: bold; margin-bottom: 12px;">Demo limiit täis!</div>' +
+        '<div style="color: var(--muted); margin-bottom: 20px;">Oled kasutanud kõik ' + DEMO_LIMIT + ' demo harjutust.<br>Sisesta koolikood, et jätkata piiramatult.</div>' +
+        '<button type="button" onclick="handleLogout()" style="font-size: 1rem; padding: 10px 20px; cursor: pointer;">Sisesta koolikood</button>';
+      paper.appendChild(msg);
     }
 
     function printPage() {
@@ -1260,7 +1736,18 @@
       try { showError(e && e.error ? e.error : e); } catch (_) {}
     });
 
-    generateAndRender();
+    // === LOGIN / DEMO EVENT LISTENERS ===
+    document.getElementById('btnLogin').addEventListener('click', (e) => { e.preventDefault(); handleLogin(); });
+    document.getElementById('btnDemo').addEventListener('click', (e) => { e.preventDefault(); handleDemo(); });
+    document.getElementById('btnLogout').addEventListener('click', (e) => { e.preventDefault(); handleLogout(); });
+    document.getElementById('loginCode').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); handleLogin(); } });
+
+    // === RESULTS EVENT LISTENERS ===
+    document.getElementById('btnCopyResults').addEventListener('click', (e) => { e.preventDefault(); copyResults(); });
+    document.getElementById('btnClearResults').addEventListener('click', (e) => { e.preventDefault(); clearResults(); });
+
+    // Initialize session (shows login or restores session)
+    initSession();
   </script>
 
 </body>
