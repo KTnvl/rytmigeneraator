@@ -398,6 +398,7 @@
     }
 
   </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 <body>
 
@@ -617,6 +618,7 @@
         <button id="btnGen" type="button">Genereeri</button>
         <button id="btnAgain" type="button" class="secondary">Uuesti</button>
         <button id="btnPrint" type="button" class="ghost">Print</button>
+        <button id="btnResults" type="button" class="ghost" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9);color:white;border:none;">📊 Tulemused</button>
       </div>
 
       <div class="small">Nipp: kui midagi ei uuene, tee värskendus (Ctrl+Shift+R / Cmd+Shift+R).</div>
@@ -1201,6 +1203,13 @@
         stopPlayback();
         const cfg = getConfig();
         lastCfg = cfg;
+        
+        // Track each exercise individually
+        const numEx = cfg.numExercises || 1;
+        for (let i = 0; i < numEx; i++) {
+          SessionTracker.trackExercise(cfg);
+        }
+        
         renderMultipleExercises(cfg);
       } catch (err) {
         console.error(err);
@@ -1212,6 +1221,13 @@
       try {
         stopPlayback();
         if (!lastCfg) return generateAndRender();
+        
+        // Track each exercise individually
+        const numEx = lastCfg.numExercises || 1;
+        for (let i = 0; i < numEx; i++) {
+          SessionTracker.trackExercise(lastCfg);
+        }
+        
         renderMultipleExercises(lastCfg);
       } catch (err) {
         console.error(err);
@@ -1325,6 +1341,400 @@
       document.getElementById('btnStop').disabled = true;
     }
 
+    // ===== DEMO REŽIIM =====
+    let demoState = {
+      name: '', cls: '', exIdx: 0,
+      results: [], evalSel: null
+    };
+    const DEMO_N = 3;
+    const evalLabels = { correct: '✅ Sain hakkama', partial: '🟡 Peaaegu', wrong: '❌ Vajab veel harjutamist' };
+    function demoOpen() {
+      demoState = { name:'', cls:'', exIdx:0, results:[], evalSel:null };
+      SessionTracker.init(); // Reset tracker
+      document.getElementById('demoName').value = '';
+      document.getElementById('demoClass').value = '';
+      document.getElementById('demoLoginErr').style.display = 'none';
+      document.getElementById('demoBoxTitle').textContent = '🎵 Rütmiharjutused';
+      demoShowScreen('demoScreenLogin');
+      document.getElementById('demoOverlay').classList.add('open');
+    }
+
+    function demoClose() {
+      document.getElementById('demoOverlay').classList.remove('open');
+      // Reset login screen text to default (for demo mode)
+      document.getElementById('demoLoginDescription').textContent = 
+        'Sisesta oma nimi ja klass, et alustada 3 rütmiharjutusega.';
+      document.getElementById('demoStartBtnText').textContent = 'Alusta harjutusi →';
+    }
+
+    function showResults() {
+      // Check if there are any tracked exercises
+      const summary = SessionTracker.getSummary();
+      if (summary.timeSignatures.length === 0) {
+        alert('📊 Pole veel ühtegi harjutust tehtud!\n\nGenereeri esmalt mõned harjutused, siis saad tulemusi vaadata.');
+        return;
+      }
+      
+      // Clear login fields
+      document.getElementById('demoName').value = '';
+      document.getElementById('demoClass').value = '';
+      document.getElementById('demoLoginErr').style.display = 'none';
+      
+      // Update login screen text for results mode
+      const exerciseCount = summary.exerciseCount;
+      document.getElementById('demoLoginDescription').textContent = 
+        'Sisesta oma nimi ja klass, et näha tehtud harjutuste (' + exerciseCount + ' tk) kokkuvõtet.';
+      document.getElementById('demoStartBtnText').textContent = 'Vaata tulemusi →';
+      
+      // Open overlay and show login screen (only for name/class)
+      document.getElementById('demoBoxTitle').textContent = '📊 Tulemused';
+      demoShowScreen('demoScreenLogin');
+      document.getElementById('demoOverlay').classList.add('open');
+    }
+
+    function demoShowScreen(id) {
+      document.querySelectorAll('.demo-screen').forEach(s => s.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+    }
+
+    function demoUpdateProgress(idx) {
+      for (let i = 0; i < DEMO_N; i++) {
+        const s = document.getElementById('dstep' + i);
+        s.classList.remove('done','active');
+        if (i < idx) s.classList.add('done');
+        else if (i === idx) s.classList.add('active');
+      }
+    }
+
+    function demoShowExercise(idx) {
+      demoState.evalSel = null;
+      demoUpdateProgress(idx);
+      document.getElementById('demoExTitle').textContent = 'Harjutus ' + (idx+1) + ' / ' + DEMO_N;
+      document.getElementById('demoNextBtn').classList.remove('visible');
+      document.querySelectorAll('.demo-eval-btns button').forEach(b => b.classList.remove('selected'));
+      const cfg = getConfig();
+      cfg.numExercises = 1;
+      SessionTracker.trackExercise(cfg); // Track config
+      console.log('Tracked exercise:', cfg);
+      console.log('Session summary:', SessionTracker.getSummary());
+      const measures = generateExercise(cfg);
+      const container = document.getElementById('demoSheetContainer');
+      container.innerHTML = '';
+      renderSingleExercise(cfg, measures, container);
+      demoShowScreen('demoScreenEx');
+    }
+
+    function demoSelectEval(val, btn) {
+      demoState.evalSel = val;
+      document.querySelectorAll('.demo-eval-btns button').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      const nextBtn = document.getElementById('demoNextBtn');
+      nextBtn.classList.add('visible');
+      nextBtn.textContent = demoState.exIdx < DEMO_N - 1 ? 'Järgmine harjutus →' : 'Vaata tulemusi →';
+    }
+
+    function demoNext() {
+      if (!demoState.evalSel) return;
+      demoState.results.push(demoState.evalSel);
+      demoState.exIdx++;
+      if (demoState.exIdx < DEMO_N) {
+        demoShowExercise(demoState.exIdx);
+      } else {
+        demoShowResults();
+      }
+    }
+
+    function demoShowResults() {
+      const list = document.getElementById('demoResultsList');
+      list.innerHTML = '';
+      
+      // Check if this is from demo mode (with self-evaluation) or just viewing results
+      const hasEvaluations = demoState.results && demoState.results.length > 0;
+      
+      if (hasEvaluations) {
+        // Demo mode: show emoji, title, and individual exercise results
+        const counts = { correct:0, partial:0, wrong:0 };
+        demoState.results.forEach(r => counts[r]++);
+        let emoji = '🎉', title = 'Harjutused lõpetatud!';
+        if (counts.correct === DEMO_N) { emoji='🏆'; title='Ideaalne! Kõik harjutused õnnestusid!'; }
+        else if (counts.wrong > 1) { emoji='💪'; title='Harjutamine viib täiuslikkuseni!'; }
+        document.getElementById('demoResultEmoji').textContent = emoji;
+        document.getElementById('demoResultTitle').textContent = title;
+        document.getElementById('demoResultSub').textContent =
+          counts.correct + '×✅  ' + counts.partial + '×🟡  ' + counts.wrong + '×❌';
+        
+        // Add individual results
+        demoState.results.forEach((r, i) => {
+          const li = document.createElement('li');
+          const e = r==='correct'?'✅':r==='partial'?'🟡':'❌';
+          li.innerHTML = '<span class="demo-results-emoji">' + e + '</span><span>Harjutus ' + (i+1) + ': ' + evalLabels[r] + '</span>';
+          list.appendChild(li);
+        });
+      } else {
+        // Results-only mode: just show summary
+        document.getElementById('demoResultEmoji').textContent = '📊';
+        document.getElementById('demoResultTitle').textContent = 'Tehtud harjutuste kokkuvõte';
+        document.getElementById('demoResultSub').textContent = demoState.name + ' · ' + demoState.cls;
+      }
+      
+      // Get session summary
+      const summary = SessionTracker.getSummary();
+      
+      // Add separator and exercise details
+      const sep = document.createElement('li');
+      sep.style.borderTop = '1.5px solid var(--border)';
+      sep.style.marginTop = '12px';
+      sep.style.paddingTop = '12px';
+      sep.innerHTML = '<strong style="color:var(--muted);font-size:0.9rem;">📋 HARJUTUSTE DETAILID</strong>';
+      list.appendChild(sep);
+      
+      // Exercise count
+      const countLi = document.createElement('li');
+      const exerciseCount = summary.exerciseCount;
+      countLi.innerHTML = '<span class="demo-results-emoji">🔢</span><span><strong>Harjutuste arv:</strong> ' + exerciseCount + '</span>';
+      list.appendChild(countLi);
+      
+      // Duration
+      if (summary.duration) {
+        const durationLi = document.createElement('li');
+        durationLi.innerHTML = '<span class="demo-results-emoji">⏱️</span><span><strong>Aeg:</strong> ' + summary.duration + '</span>';
+        list.appendChild(durationLi);
+      }
+      
+      // Time signatures
+      const tsLi = document.createElement('li');
+      tsLi.innerHTML = '<span class="demo-results-emoji">🎼</span><span><strong>Taktimõõdud:</strong> ' + summary.timeSignatures.join(', ') + '</span>';
+      list.appendChild(tsLi);
+      
+      // Lengths
+      const lenLi = document.createElement('li');
+      lenLi.innerHTML = '<span class="demo-results-emoji">📏</span><span><strong>Pikkused:</strong> ' + summary.lengths.map(l => l + ' takti').join(', ') + '</span>';
+      list.appendChild(lenLi);
+      
+      // Rhythms - show SVG icons
+      const rhyLi = document.createElement('li');
+      rhyLi.innerHTML = '<div style="margin-bottom:8px;"><strong style="color:var(--muted);font-size:0.9rem;">🎵 Kasutatud rütmid:</strong></div>';
+      
+      const iconsContainer = document.createElement('div');
+      iconsContainer.style.display = 'flex';
+      iconsContainer.style.flexWrap = 'wrap';
+      iconsContainer.style.gap = '8px';
+      iconsContainer.style.marginTop = '8px';
+      
+      // Get unique rhythm tokens from exercises
+      const usedTokens = new Set();
+      summary.rhythms.forEach(r => {
+        // Map rhythm names to token IDs (matching actual HTML IDs)
+        const tokenMap = {
+          'ta': 'tok_ta',
+          'ta-a': 'tok_taa',
+          'ti-ti': 'tok_titi',
+          'ta-a-a': 'tok_taaa',
+          'ta-a-i': 'tok_taai',
+          'ti-ri': 'tok_tiri',
+          'tai-ri': 'tok_tairi',
+          'triool': 'tok_triplet',
+          'sünkoop (pikk)': 'tok_sync',
+          'ti-ti-ri': 'tok_titiri',
+          'ti-ri-ti': 'tok_tiriti',
+          'ti-ta-ti': 'tok_titi', // Falls back to ti-ti (no separate icon)
+          'ti-ri-ti-ri': 'tok_ititiri',
+          'ti-tiri': 'tok_titiri'
+        };
+        
+        const tokenId = tokenMap[r];
+        if (tokenId) {
+          const checkbox = document.getElementById(tokenId);
+          if (checkbox && checkbox.nextElementSibling) {
+            const svg = checkbox.nextElementSibling.cloneNode(true);
+            svg.style.opacity = '1';
+            svg.style.background = '#f9fafb';
+            svg.style.padding = '6px';
+            svg.style.borderRadius = '8px';
+            svg.style.border = '1.5px solid var(--border)';
+            iconsContainer.appendChild(svg);
+          }
+        }
+      });
+      
+      rhyLi.appendChild(iconsContainer);
+      list.appendChild(rhyLi);
+      
+      document.getElementById('demoCopiedMsg').style.display = 'none';
+      document.getElementById('demoBoxTitle').textContent = '📊 Kokkuvõte';
+      demoShowScreen('demoScreenResults');
+    }
+
+    function demoCopy() {
+      const d = new Date();
+      const dateStr = d.toLocaleDateString('et-EE') + ' ' + d.toLocaleTimeString('et-EE', {hour:'2-digit',minute:'2-digit'});
+      const summary = SessionTracker.getSummary();
+      
+      let text = '🎵 Rütmiharjutuste tulemused\n';
+      text += '================================\n';
+      text += 'Õpilane: ' + demoState.name + '\n';
+      text += 'Klass: ' + demoState.cls + '\n';
+      text += 'Kuupäev: ' + dateStr + '\n';
+      text += '--------------------------------\n';
+      
+      // Only add individual results if they exist (demo mode)
+      if (demoState.results && demoState.results.length > 0) {
+        text += 'TULEMUSED:\n';
+        demoState.results.forEach((r, i) => {
+          text += 'Harjutus ' + (i+1) + ': ' + evalLabels[r] + '\n';
+        });
+        text += '--------------------------------\n';
+      }
+      
+      text += 'HARJUTUSTE DETAILID:\n';
+      if (summary.duration) {
+        text += 'Aeg: ' + summary.duration + '\n';
+      }
+      text += 'Taktimõõdud: ' + summary.timeSignatures.join(', ') + '\n';
+      text += 'Pikkused: ' + summary.lengths.map(l => l + ' takti').join(', ') + '\n';
+      if (summary.rhythms && summary.rhythms.length > 0) {
+        text += 'Rütmid: ' + summary.rhythms.join(', ') + '\n';
+      }
+      text += '================================';
+      navigator.clipboard.writeText(text).then(() => {
+        document.getElementById('demoCopiedMsg').style.display = 'block';
+      }).catch(() => {
+        prompt('Kopeeri see tekst:', text);
+      });
+    }
+
+    function demoSaveImage() {
+      // Hide copy/save messages and buttons temporarily
+      document.getElementById('demoCopiedMsg').style.display = 'none';
+      document.getElementById('demoSavedMsg').style.display = 'none';
+      const copyBtn = document.getElementById('demoCopyBtn');
+      const saveBtn = document.getElementById('demoSaveBtn');
+      const closeBtn = document.querySelector('#demoScreenResults button[onclick="demoClose()"]');
+      
+      copyBtn.style.display = 'none';
+      saveBtn.style.display = 'none';
+      closeBtn.style.display = 'none';
+      
+      // Capture the results screen
+      const resultsScreen = document.getElementById('demoScreenResults');
+      
+      html2canvas(resultsScreen, {
+        backgroundColor: '#ffffff',
+        scale: 2, // Higher quality
+        logging: false
+      }).then(canvas => {
+        // Convert to blob and download
+        canvas.toBlob(blob => {
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          const fileName = 'rütmiharjutused_' + demoState.name.replace(/\s/g, '_') + '_' + demoState.cls + '.png';
+          a.download = fileName;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          
+          // Show saved message
+          document.getElementById('demoSavedMsg').style.display = 'block';
+          
+          // Restore buttons
+          copyBtn.style.display = 'block';
+          saveBtn.style.display = 'block';
+          closeBtn.style.display = 'block';
+        });
+      }).catch(err => {
+        console.error('Screenshot error:', err);
+        alert('Viga pildi salvestamisel!');
+        
+        // Restore buttons
+        copyBtn.style.display = 'block';
+        saveBtn.style.display = 'block';
+        closeBtn.style.display = 'block';
+      });
+    }
+
+    const SessionTracker = {
+      usedRhythms: new Set(),
+      usedTimeSignatures: new Set(),
+      usedLengths: new Set(),
+      exerciseCount: 0,  // Track actual number of exercises
+      startTime: null,   // When first exercise was generated
+      
+      init() {
+        this.usedRhythms.clear();
+        this.usedTimeSignatures.clear();
+        this.usedLengths.clear();
+        this.exerciseCount = 0;
+        this.startTime = null;
+      },
+      
+      trackExercise(config) {
+        // Start timer on first exercise
+        if (this.exerciseCount === 0) {
+          this.startTime = Date.now();
+        }
+        
+        // Increment exercise count
+        this.exerciseCount++;
+        
+        // Track time signature
+        this.usedTimeSignatures.add(`${config.numer}/${config.denom}`);
+        
+        // Track length
+        this.usedLengths.add(config.measures);
+        
+        // Track rhythms from enabled config
+        const rhythmNames = {
+          'TA': 'ta',
+          'TA_A': 'ta-a',
+          'TI_TI': 'ti-ti',
+          'TA_A_A': 'ta-a-a',
+          'TA_A_I': 'ta-a-i',
+          'TI_RI': 'ti-ri',
+          'DOTTED_8_16': 'tai-ri',
+          'TRIPLET_8': 'triool',
+          'SYNC_8_Q_8': 'sünkoop (pikk)',
+          'SYNC_16_8_16': 'ti-ti-ri',
+          'TI_RI_TI': 'ti-ri-ti',
+          'TI_TI_RI': 'ti-ta-ti',
+          'TI_RI_TI_RI': 'ti-ri-ti-ri',
+          'TI_TIRI': 'ti-tiri'
+        };
+        
+        config.enabled.forEach(r => {
+          if (rhythmNames[r]) {
+            this.usedRhythms.add(rhythmNames[r]);
+          }
+        });
+      },
+      
+      getDuration() {
+        if (!this.startTime) return null;
+        const elapsed = Date.now() - this.startTime;
+        const seconds = Math.floor(elapsed / 1000);
+        const minutes = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        
+        if (minutes > 0) {
+          return minutes + ' min ' + secs + ' sek';
+        } else {
+          return secs + ' sek';
+        }
+      },
+      
+      getSummary() {
+        return {
+          exerciseCount: this.exerciseCount,
+          duration: this.getDuration(),
+          timeSignatures: Array.from(this.usedTimeSignatures).sort(),
+          lengths: Array.from(this.usedLengths).sort((a,b) => a-b),
+          rhythms: Array.from(this.usedRhythms).sort()
+        };
+      }
+    };
+
+
     window.onload = function() {
       document.getElementById('btnGen').addEventListener('click', (e) => { e.preventDefault(); generateAndRender(); });
     document.getElementById('btnAgain').addEventListener('click', (e) => { e.preventDefault(); again(); });
@@ -1425,231 +1835,50 @@
 
 
     // ===== SESSION TRACKER =====
-    const SessionTracker = {
-      usedRhythms: new Set(),
-      usedTimeSignatures: new Set(),
-      usedLengths: new Set(),
-      
-      init() {
-        this.usedRhythms.clear();
-        this.usedTimeSignatures.clear();
-        this.usedLengths.clear();
-      },
-      
-      trackExercise(config) {
-        // Track time signature
-        this.usedTimeSignatures.add(`${config.numer}/${config.denom}`);
-        
-        // Track length
-        this.usedLengths.add(config.measures);
-        
-        // Track rhythms from enabled config
-        const rhythmNames = {
-          'TA': 'ta',
-          'TA_A': 'ta-a',
-          'TI_TI': 'ti-ti',
-          'TA_A_A': 'ta-a-a',
-          'TA_A_I': 'ta-a-i',
-          'TI_RI': 'ti-ri',
-          'DOTTED_8_16': 'tai-ri',
-          'TRIPLET_8': 'triool',
-          'SYNC_8_Q_8': 'sünkoop (pikk)',
-          'SYNC_16_8_16': 'ti-ti-ri',
-          'TI_RI_TI': 'ti-ri-ti',
-          'TI_TI_RI': 'ti-ta-ti',
-          'TI_RI_TI_RI': 'ti-ri-ti-ri',
-          'TI_TIRI': 'ti-tiri'
-        };
-        
-        config.enabled.forEach(r => {
-          if (rhythmNames[r]) {
-            this.usedRhythms.add(rhythmNames[r]);
-          }
-        });
-      },
-      
-      getSummary() {
-        return {
-          timeSignatures: Array.from(this.usedTimeSignatures).sort(),
-          lengths: Array.from(this.usedLengths).sort((a,b) => a-b),
-          rhythms: Array.from(this.usedRhythms).sort()
-        };
-      }
-    };
 
-    // ===== DEMO REŽIIM =====
-    let demoState = {
-      name: '', cls: '', exIdx: 0,
-      results: [], evalSel: null
-    };
-    const DEMO_N = 3;
-    const evalLabels = { correct: '✅ Sain hakkama', partial: '🟡 Peaaegu', wrong: '❌ Vajan harjutust' };
 
-    function demoOpen() {
-      demoState = { name:'', cls:'', exIdx:0, results:[], evalSel:null };
-      SessionTracker.init(); // Reset tracker
-      document.getElementById('demoName').value = '';
-      document.getElementById('demoClass').value = '';
-      document.getElementById('demoLoginErr').style.display = 'none';
-      document.getElementById('demoBoxTitle').textContent = '🎵 Rütmiharjutused';
-      demoShowScreen('demoScreenWelcome');
-      document.getElementById('demoOverlay').classList.add('open');
-    }
 
-    function demoClose() {
-      document.getElementById('demoOverlay').classList.remove('open');
-    }
-
-    function demoShowScreen(id) {
-      document.querySelectorAll('.demo-screen').forEach(s => s.classList.remove('active'));
-      document.getElementById(id).classList.add('active');
-    }
-
-    function demoUpdateProgress(idx) {
-      for (let i = 0; i < DEMO_N; i++) {
-        const s = document.getElementById('dstep' + i);
-        s.classList.remove('done','active');
-        if (i < idx) s.classList.add('done');
-        else if (i === idx) s.classList.add('active');
-      }
-    }
-
-    function demoShowExercise(idx) {
-      demoState.evalSel = null;
-      demoUpdateProgress(idx);
-      document.getElementById('demoExTitle').textContent = 'Harjutus ' + (idx+1) + ' / ' + DEMO_N;
-      document.getElementById('demoNextBtn').classList.remove('visible');
-      document.querySelectorAll('.demo-eval-btns button').forEach(b => b.classList.remove('selected'));
-      const cfg = getConfig();
-      cfg.numExercises = 1;
-      SessionTracker.trackExercise(cfg); // Track config
-      console.log('Tracked exercise:', cfg);
-      console.log('Session summary:', SessionTracker.getSummary());
-      const measures = generateExercise(cfg);
-      const container = document.getElementById('demoSheetContainer');
-      container.innerHTML = '';
-      renderSingleExercise(cfg, measures, container);
-      demoShowScreen('demoScreenEx');
-    }
-
-    function demoSelectEval(val, btn) {
-      demoState.evalSel = val;
-      document.querySelectorAll('.demo-eval-btns button').forEach(b => b.classList.remove('selected'));
-      btn.classList.add('selected');
-      const nextBtn = document.getElementById('demoNextBtn');
-      nextBtn.classList.add('visible');
-      nextBtn.textContent = demoState.exIdx < DEMO_N - 1 ? 'Järgmine harjutus →' : 'Vaata tulemusi →';
-    }
-
-    function demoNext() {
-      if (!demoState.evalSel) return;
-      demoState.results.push(demoState.evalSel);
-      demoState.exIdx++;
-      if (demoState.exIdx < DEMO_N) {
-        demoShowExercise(demoState.exIdx);
-      } else {
-        demoShowResults();
-      }
-    }
-
-    function demoShowResults() {
-      const counts = { correct:0, partial:0, wrong:0 };
-      demoState.results.forEach(r => counts[r]++);
-      let emoji = '🎉', title = 'Harjutused lõpetatud!';
-      if (counts.correct === DEMO_N) { emoji='🏆'; title='Ideaalne! Kõik harjutused õnnestusid!'; }
-      else if (counts.wrong > 1) { emoji='💪'; title='Harjutamine viib täiuslikkuseni!'; }
-      document.getElementById('demoResultEmoji').textContent = emoji;
-      document.getElementById('demoResultTitle').textContent = title;
-      document.getElementById('demoResultSub').textContent =
-        counts.correct + '×✅  ' + counts.partial + '×🟡  ' + counts.wrong + '×❌';
-      
-      // Get session summary
-      const summary = SessionTracker.getSummary();
-      
-      const list = document.getElementById('demoResultsList');
-      list.innerHTML = '';
-      
-      // Add results
-      demoState.results.forEach((r, i) => {
-        const li = document.createElement('li');
-        const e = r==='correct'?'✅':r==='partial'?'🟡':'❌';
-        li.innerHTML = '<span class="demo-results-emoji">' + e + '</span><span>Harjutus ' + (i+1) + ': ' + evalLabels[r] + '</span>';
-        list.appendChild(li);
-      });
-      
-      // Add separator and exercise details
-      const sep = document.createElement('li');
-      sep.style.borderTop = '1.5px solid var(--border)';
-      sep.style.marginTop = '12px';
-      sep.style.paddingTop = '12px';
-      sep.innerHTML = '<strong style="color:var(--muted);font-size:0.9rem;">📋 HARJUTUSTE DETAILID</strong>';
-      list.appendChild(sep);
-      
-      // Time signatures
-      const tsLi = document.createElement('li');
-      tsLi.innerHTML = '<span class="demo-results-emoji">🎼</span><span><strong>Taktimõõdud:</strong> ' + summary.timeSignatures.join(', ') + '</span>';
-      list.appendChild(tsLi);
-      
-      // Lengths
-      const lenLi = document.createElement('li');
-      lenLi.innerHTML = '<span class="demo-results-emoji">📏</span><span><strong>Pikkused:</strong> ' + summary.lengths.map(l => l + ' takti').join(', ') + '</span>';
-      list.appendChild(lenLi);
-      
-      // Rhythms
-      const rhyLi = document.createElement('li');
-      rhyLi.innerHTML = '<span class="demo-results-emoji">🎵</span><span><strong>Kasutatud rütmid:</strong> ' + summary.rhythms.join(', ') + '</span>';
-      list.appendChild(rhyLi);
-      
-      document.getElementById('demoCopiedMsg').style.display = 'none';
-      document.getElementById('demoBoxTitle').textContent = '📊 Kokkuvõte';
-      demoShowScreen('demoScreenResults');
-    }
-
-    function demoCopy() {
-      const d = new Date();
-      const dateStr = d.toLocaleDateString('et-EE') + ' ' + d.toLocaleTimeString('et-EE', {hour:'2-digit',minute:'2-digit'});
-      const summary = SessionTracker.getSummary();
-      
-      let text = '🎵 Rütmiharjutuste tulemused\n';
-      text += '================================\n';
-      text += 'Õpilane: ' + demoState.name + '\n';
-      text += 'Klass: ' + demoState.cls + '\n';
-      text += 'Kuupäev: ' + dateStr + '\n';
-      text += '--------------------------------\n';
-      text += 'TULEMUSED:\n';
-      demoState.results.forEach((r, i) => {
-        text += 'Harjutus ' + (i+1) + ': ' + evalLabels[r] + '\n';
-      });
-      text += '--------------------------------\n';
-      text += 'HARJUTUSTE DETAILID:\n';
-      text += 'Taktimõõdud: ' + summary.timeSignatures.join(', ') + '\n';
-      text += 'Pikkused: ' + summary.lengths.map(l => l + ' takti').join(', ') + '\n';
-      text += 'Kasutatud rütmid: ' + summary.rhythms.join(', ') + '\n';
-      text += '================================';
-      navigator.clipboard.writeText(text).then(() => {
-        document.getElementById('demoCopiedMsg').style.display = 'block';
-      }).catch(() => {
-        prompt('Kopeeri see tekst:', text);
-      });
-    }
-
+    document.getElementById('btnResults').addEventListener('click', showResults);
     document.getElementById('demoCloseBtn').addEventListener('click', demoClose);
     document.getElementById('demoStartBtn').addEventListener('click', () => {
       const n = document.getElementById('demoName').value.trim();
       const c = document.getElementById('demoClass').value.trim();
       if (!n || !c) { document.getElementById('demoLoginErr').style.display='block'; return; }
       demoState.name = n; demoState.cls = c;
-      demoState.exIdx = 0; demoState.results = [];
-      demoShowExercise(0);
+      
+      // Check if this is called from "Results" button (not demo mode)
+      const title = document.getElementById('demoBoxTitle').textContent;
+      if (title === '📊 Tulemused') {
+        // Go directly to results screen (skip exercises)
+        demoShowResults();
+      } else {
+        // Normal demo mode: start exercises
+        demoState.exIdx = 0; demoState.results = [];
+        demoShowExercise(0);
+      }
     });
     document.getElementById('demoNextBtn').addEventListener('click', demoNext);
     document.getElementById('demoCopyBtn').addEventListener('click', demoCopy);
+    document.getElementById('demoSaveBtn').addEventListener('click', demoSaveImage);
     document.getElementById('demoOverlay').addEventListener('click', (e) => {
       if (e.target === document.getElementById('demoOverlay')) demoClose();
     });
     // ===== DEMO LÕPP =====
 
-    generateAndRender();
+    // Initial display - show an exercise but don't track it
+    function generateInitial() {
+      try {
+        stopPlayback();
+        const cfg = getConfig();
+        lastCfg = cfg;
+        renderMultipleExercises(cfg); // Display without tracking
+      } catch (err) {
+        console.error(err);
+        showError(err);
+      }
+    }
+    
+    generateInitial(); // Show initial exercise (not tracked)
     }; // End of window.onload
 
   </script>
@@ -1659,13 +1888,13 @@
   <div id="demoOverlay">
     <div id="demoBox">
       <div class="demo-header">
-        <h2>🎓 Rütmiharjutused – demo</h2>
+        <h2 id="demoBoxTitle">🎓 Rütmiharjutused – demo</h2>
         <button class="demo-close" id="demoCloseBtn">✕</button>
       </div>
 
       <!-- Sisselogimine -->
       <div class="demo-screen active" id="demoScreenLogin">
-        <p style="color:var(--muted);margin:0 0 20px;">Sisesta oma nimi ja klass, et alustada 3 rütmiharjutusega.</p>
+        <p id="demoLoginDescription" style="color:var(--muted);margin:0 0 20px;">Sisesta oma nimi ja klass, et alustada 3 rütmiharjutusega.</p>
         <div class="demo-input-group">
           <label for="demoName">Eesnimi ja perekonnanimi</label>
           <input type="text" id="demoName" placeholder="nt Jaan Tamm" autocomplete="off" />
@@ -1675,7 +1904,7 @@
           <input type="text" id="demoClass" placeholder="nt 5A" autocomplete="off" />
         </div>
         <button id="demoStartBtn" style="width:100%;padding:13px;background:linear-gradient(135deg,#8b5cf6,#6d28d9);color:white;border:none;border-radius:12px;font-size:1rem;font-weight:600;cursor:pointer;margin-top:4px;">
-          Alusta harjutusi →
+          <span id="demoStartBtnText">Alusta harjutusi →</span>
         </button>
         <p id="demoLoginErr" style="color:#dc2626;font-size:0.88rem;margin-top:10px;display:none;">Palun täida mõlemad väljad.</p>
       </div>
@@ -1693,7 +1922,7 @@
         <div class="demo-eval-btns">
           <button class="btn-correct" onclick="demoSelectEval('correct',this)">✅ Sain hakkama</button>
           <button class="btn-partial" onclick="demoSelectEval('partial',this)">🟡 Peaaegu</button>
-          <button class="btn-wrong" onclick="demoSelectEval('wrong',this)">❌ Vajan harjutust</button>
+          <button class="btn-wrong" onclick="demoSelectEval('wrong',this)">❌ Vajab veel harjutamist</button>
         </div>
         <button class="demo-next-btn" id="demoNextBtn">Järgmine harjutus →</button>
       </div>
@@ -1707,7 +1936,9 @@
         </div>
         <ul class="demo-results-list" id="demoResultsList"></ul>
         <button class="demo-copy-btn" id="demoCopyBtn">📨 Saada õpetajale</button>
+        <button class="demo-copy-btn" id="demoSaveBtn" style="margin-top:8px;background:linear-gradient(135deg,#10b981,#059669);">💾 Salvesta pildina</button>
         <div class="demo-copied-msg" id="demoCopiedMsg">✓ Kopeeritud! Saada see tekst oma õpetajale (SMS, e-mail, Teams...).</div>
+        <div class="demo-copied-msg" id="demoSavedMsg">✓ Pilt salvestatud! Leiad selle oma allalaadimistest.</div>
         <button style="width:100%;margin-top:12px;padding:11px;background:var(--bg);border:1.5px solid var(--border);border-radius:12px;cursor:pointer;font-size:0.95rem;" onclick="demoClose()">Sulge</button>
       </div>
     </div>
