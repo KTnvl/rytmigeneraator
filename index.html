@@ -412,8 +412,6 @@
   <div class="layout">
 
     <section class="card controls">
-      <div id="demoInfoBar" style="display: none; padding: 12px; border-radius: 12px; margin-bottom: 16px; font-size: 0.9rem;"></div>
-      
       <h2>Sisu</h2>
       <div class="grid" style="margin-bottom: 6px;">
         <!-- ta - veerand (täidetud noodipea + vars) -->
@@ -618,8 +616,7 @@
       <div class="btnbar">
         <button id="btnGen" type="button">Genereeri</button>
         <button id="btnAgain" type="button" class="secondary">Uuesti</button>
-        <button id="btnPrint" type="button" class="ghost">🖨️ Print</button>
-        <button id="btnDemo" type="button" class="ghost" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9);color:white;border:none;">🎓 Demo</button>
+        <button id="btnPrint" type="button" class="ghost">Print</button>
       </div>
 
       <div class="small">Nipp: kui midagi ei uuene, tee värskendus (Ctrl+Shift+R / Cmd+Shift+R).</div>
@@ -649,48 +646,6 @@
   </div>
 
   <script>
-    // === DEMO LIMIT CONTROL ===
-    const DEMO_LIMIT = 3;
-    
-    const DemoLimit = {
-      getUsage() {
-        const stored = localStorage.getItem('demoUsage');
-        return stored ? parseInt(stored) : 0;
-      },
-      incrementUsage() {
-        const current = this.getUsage();
-        localStorage.setItem('demoUsage', (current + 1).toString());
-      },
-      getRemaining() {
-        return Math.max(0, DEMO_LIMIT - this.getUsage());
-      },
-      hasExceeded() {
-        return this.getUsage() >= DEMO_LIMIT;
-      },
-      reset() {
-        localStorage.removeItem('demoUsage');
-      }
-    };
-
-    function updateDemoInfo() {
-      const remaining = DemoLimit.getRemaining();
-      const infoDiv = document.getElementById('demoInfoBar');
-      
-      if (!infoDiv) return;
-      
-      if (remaining > 0) {
-        infoDiv.innerHTML = '<strong>ℹ️ Demo režiim:</strong> ' + remaining + ' harjutust jäänud';
-        infoDiv.style.display = 'block';
-        infoDiv.style.background = '#f0fdf4';
-        infoDiv.style.border = '1px solid #86efac';
-      } else {
-        infoDiv.innerHTML = '<strong>⚠️ Limiit täis!</strong> Värskenda lehte uute harjutuste saamiseks.';
-        infoDiv.style.display = 'block';
-        infoDiv.style.background = '#fef2f2';
-        infoDiv.style.border = '1px solid #fca5a5';
-      }
-    }
-
     // === UNIT SYSTEM ===
     const TICKS_PER_BEAT = 24;
 
@@ -1243,20 +1198,9 @@
 
     function generateAndRender() {
       try {
-        // Check demo limit
-        if (DemoLimit.hasExceeded()) {
-          alert('⚠️ Demo limiit saavutatud!\n\nOled juba teinud ' + DEMO_LIMIT + ' harjutust.\n\nKui soovid jätkata, värskenda lehte (Ctrl+Shift+R).');
-          return;
-        }
-
         stopPlayback();
         const cfg = getConfig();
         lastCfg = cfg;
-        
-        // Increment usage counter
-        DemoLimit.incrementUsage();
-        updateDemoInfo();
-        
         renderMultipleExercises(cfg);
       } catch (err) {
         console.error(err);
@@ -1266,19 +1210,8 @@
 
     function again() {
       try {
-        // Check demo limit
-        if (DemoLimit.hasExceeded()) {
-          alert('⚠️ Demo limiit saavutatud!\n\nOled juba teinud ' + DEMO_LIMIT + ' harjutust.\n\nKui soovid jätkata, värskenda lehte (Ctrl+Shift+R).');
-          return;
-        }
-
         stopPlayback();
         if (!lastCfg) return generateAndRender();
-        
-        // Increment usage counter
-        DemoLimit.incrementUsage();
-        updateDemoInfo();
-        
         renderMultipleExercises(lastCfg);
       } catch (err) {
         console.error(err);
@@ -1290,72 +1223,7 @@
       window.print();
     }
 
-    // Initialize demo info on page load
-    window.addEventListener('DOMContentLoaded', () => {
-      updateDemoInfo();
-    });
-
-    document.getElementById('btnGen').addEventListener('click', (e) => { e.preventDefault(); generateAndRender(); });
-    document.getElementById('btnAgain').addEventListener('click', (e) => { e.preventDefault(); again(); });
-    document.getElementById('btnPrint').addEventListener('click', (e) => { e.preventDefault(); printPage(); });
-    
-    // Vali kõik nupp
-    document.getElementById('btnSelectAll').addEventListener('click', (e) => {
-      e.preventDefault();
-      const allChecked = document.querySelectorAll('.grid input[type="checkbox"]');
-      const anyUnchecked = Array.from(allChecked).some(cb => !cb.checked);
-      
-      allChecked.forEach(cb => {
-        cb.checked = anyUnchecked;
-      });
-      
-      // Muuda nupu teksti
-      e.target.textContent = anyUnchecked ? '✗ Tühista valik' : '✓ Vali kõik';
-    });
-    
-    // Kontrollide peitmise ja täisekraani toggle
-    const btnToggle = document.getElementById('btnToggleUI');
-    const layout = document.querySelector('.layout');
-    let controlsHidden = false;
-    
-    btnToggle.addEventListener('click', async (e) => {
-      e.preventDefault();
-      controlsHidden = !controlsHidden;
-      
-      if (controlsHidden) {
-        layout.classList.add('controls-hidden');
-        document.body.classList.add('controls-hidden');
-        btnToggle.textContent = '⚙️ Näita kontrolle';
-        btnToggle.classList.remove('ghost');
-        btnToggle.classList.add('primary');
-        
-        // Proovi minna täisekraani
-        try {
-          if (document.documentElement.requestFullscreen) {
-            await document.documentElement.requestFullscreen();
-          }
-        } catch (err) {
-          console.log('Täisekraan ei õnnestunud:', err);
-        }
-      } else {
-        layout.classList.remove('controls-hidden');
-        document.body.classList.remove('controls-hidden');
-        btnToggle.textContent = '⚙️ Peida kontrollid';
-        btnToggle.classList.remove('primary');
-        btnToggle.classList.add('ghost');
-        
-        // Välju täisekraanist
-        try {
-          if (document.fullscreenElement && document.exitFullscreen) {
-            await document.exitFullscreen();
-          }
-        } catch (err) {
-          console.log('Täisekraanist väljumine ei õnnestunud:', err);
-        }
-      }
-    });
-    
-    // ========== AUDIO PLAYBACK ==========
+    // Initialize when DOM is ready
     let audioContext = null;
     let currentExerciseData = null;
     let isPlaying = false;
@@ -1456,6 +1324,69 @@
       document.getElementById('btnPlay').disabled = false;
       document.getElementById('btnStop').disabled = true;
     }
+
+    window.onload = function() {
+      document.getElementById('btnGen').addEventListener('click', (e) => { e.preventDefault(); generateAndRender(); });
+    document.getElementById('btnAgain').addEventListener('click', (e) => { e.preventDefault(); again(); });
+    document.getElementById('btnPrint').addEventListener('click', (e) => { e.preventDefault(); printPage(); });
+    
+    // Vali kõik nupp
+    document.getElementById('btnSelectAll').addEventListener('click', (e) => {
+      e.preventDefault();
+      const allChecked = document.querySelectorAll('.grid input[type="checkbox"]');
+      const anyUnchecked = Array.from(allChecked).some(cb => !cb.checked);
+      
+      allChecked.forEach(cb => {
+        cb.checked = anyUnchecked;
+      });
+      
+      // Muuda nupu teksti
+      e.target.textContent = anyUnchecked ? '✗ Tühista valik' : '✓ Vali kõik';
+    });
+    
+    // Kontrollide peitmise ja täisekraani toggle
+    const btnToggle = document.getElementById('btnToggleUI');
+    const layout = document.querySelector('.layout');
+    let controlsHidden = false;
+    
+    btnToggle.addEventListener('click', async (e) => {
+      e.preventDefault();
+      controlsHidden = !controlsHidden;
+      
+      if (controlsHidden) {
+        layout.classList.add('controls-hidden');
+        document.body.classList.add('controls-hidden');
+        btnToggle.textContent = '⚙️ Näita kontrolle';
+        btnToggle.classList.remove('ghost');
+        btnToggle.classList.add('primary');
+        
+        // Proovi minna täisekraani
+        try {
+          if (document.documentElement.requestFullscreen) {
+            await document.documentElement.requestFullscreen();
+          }
+        } catch (err) {
+          console.log('Täisekraan ei õnnestunud:', err);
+        }
+      } else {
+        layout.classList.remove('controls-hidden');
+        document.body.classList.remove('controls-hidden');
+        btnToggle.textContent = '⚙️ Peida kontrollid';
+        btnToggle.classList.remove('primary');
+        btnToggle.classList.add('ghost');
+        
+        // Välju täisekraanist
+        try {
+          if (document.fullscreenElement && document.exitFullscreen) {
+            await document.exitFullscreen();
+          }
+        } catch (err) {
+          console.log('Täisekraanist väljumine ei õnnestunud:', err);
+        }
+      }
+    });
+    
+    // ========== AUDIO PLAYBACK ==========
 
     document.getElementById('btnPlay').addEventListener('click', startPlayback);
     document.getElementById('btnStop').addEventListener('click', stopPlayback);
@@ -1702,15 +1633,7 @@
       });
     }
 
-    document.getElementById('btnDemo').addEventListener('click', demoOpen);
     document.getElementById('demoCloseBtn').addEventListener('click', demoClose);
-    // document.getElementById('demoModeBtn').addEventListener('click', () => {
-    //   document.getElementById('demoBoxTitle').textContent = '🎓 Demo';
-    //   demoShowScreen('demoScreenLogin');
-    // });
-    // document.getElementById('demoLoginCodeBtn').addEventListener('click', () => {
-    //   alert('Kooli sisselogimise funktsioon on tulemas! Kasuta praegu Demo režiimi.');
-    // });
     document.getElementById('demoStartBtn').addEventListener('click', () => {
       const n = document.getElementById('demoName').value.trim();
       const c = document.getElementById('demoClass').value.trim();
@@ -1727,6 +1650,8 @@
     // ===== DEMO LÕPP =====
 
     generateAndRender();
+    }; // End of window.onload
+
   </script>
 
 
