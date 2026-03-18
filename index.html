@@ -1551,18 +1551,29 @@
           const checkbox = document.getElementById(tokenId);
           if (checkbox && checkbox.nextElementSibling) {
             const svg = checkbox.nextElementSibling.cloneNode(true);
+            
+            // Create wrapper div for each SVG
+            const wrapper = document.createElement('div');
+            wrapper.style.background = '#f9fafb';
+            wrapper.style.padding = '10px';
+            wrapper.style.borderRadius = '8px';
+            wrapper.style.border = '1.5px solid var(--border)';
+            wrapper.style.minHeight = '70px'; // Fixed minimum height
+            wrapper.style.minWidth = '50px'; // Minimum width
+            wrapper.style.display = 'flex';
+            wrapper.style.alignItems = 'center';
+            wrapper.style.justifyContent = 'center';
+            
+            // SVG keeps natural proportions inside wrapper
             svg.style.opacity = '1';
-            svg.style.background = '#f9fafb';
-            svg.style.padding = '10px 8px 18px 8px'; // Extra bottom padding
-            svg.style.borderRadius = '8px';
-            svg.style.border = '1.5px solid var(--border)';
-            svg.style.minHeight = '65px'; // Minimum height to prevent cutoff
-            svg.style.height = 'auto'; // Auto height to preserve proportions
-            svg.style.width = 'auto'; // Auto width to preserve proportions
-            svg.style.maxWidth = '120px'; // Maximum width
-            svg.style.display = 'block'; // Block display
-            svg.style.overflow = 'visible'; // Allow content to show fully
-            iconsContainer.appendChild(svg);
+            svg.style.height = 'auto';
+            svg.style.width = 'auto';
+            svg.style.maxWidth = '110px';
+            svg.style.maxHeight = '55px'; // Prevent too tall
+            svg.style.display = 'block';
+            
+            wrapper.appendChild(svg);
+            iconsContainer.appendChild(wrapper);
           }
         }
       });
