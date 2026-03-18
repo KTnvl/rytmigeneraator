@@ -1553,13 +1553,15 @@
             const svg = checkbox.nextElementSibling.cloneNode(true);
             svg.style.opacity = '1';
             svg.style.background = '#f9fafb';
-            svg.style.padding = '8px 6px 12px 6px'; // More padding at bottom
+            svg.style.padding = '10px 8px 18px 8px'; // Extra bottom padding
             svg.style.borderRadius = '8px';
             svg.style.border = '1.5px solid var(--border)';
-            svg.style.height = '60px'; // Explicit height to prevent cutoff
-            svg.style.minHeight = '60px'; // Minimum height
+            svg.style.minHeight = '65px'; // Minimum height to prevent cutoff
+            svg.style.height = 'auto'; // Auto height to preserve proportions
+            svg.style.width = 'auto'; // Auto width to preserve proportions
+            svg.style.maxWidth = '120px'; // Maximum width
             svg.style.display = 'block'; // Block display
-            svg.style.overflow = 'visible'; // Allow content to overflow
+            svg.style.overflow = 'visible'; // Allow content to show fully
             iconsContainer.appendChild(svg);
           }
         }
