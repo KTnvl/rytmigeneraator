@@ -1522,6 +1522,8 @@
       iconsContainer.style.marginTop = '8px';
       iconsContainer.style.marginBottom = '50px'; // Much more space to prevent cutoff
       iconsContainer.style.paddingBottom = '30px'; // Extra padding for safety
+      iconsContainer.style.alignItems = 'flex-start'; // Don't stretch icons vertically
+      iconsContainer.style.alignContent = 'flex-start'; // Don't stretch rows
       
       // Get unique rhythm tokens from exercises
       const usedTokens = new Set();
@@ -1551,9 +1553,13 @@
             const svg = checkbox.nextElementSibling.cloneNode(true);
             svg.style.opacity = '1';
             svg.style.background = '#f9fafb';
-            svg.style.padding = '6px';
+            svg.style.padding = '8px 6px 12px 6px'; // More padding at bottom
             svg.style.borderRadius = '8px';
             svg.style.border = '1.5px solid var(--border)';
+            svg.style.height = '60px'; // Explicit height to prevent cutoff
+            svg.style.minHeight = '60px'; // Minimum height
+            svg.style.display = 'block'; // Block display
+            svg.style.overflow = 'visible'; // Allow content to overflow
             iconsContainer.appendChild(svg);
           }
         }
