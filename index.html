@@ -365,7 +365,7 @@
       display: none;
     }
     .demo-next-btn.visible { display: block; }
-    .demo-results-list { list-style: none; padding: 0 0 30px 0; margin: 0 0 20px; min-height: 200px; }
+    .demo-results-list { list-style: none; padding: 0 0 80px 0; margin: 0 0 20px; min-height: 200px; }
     .demo-results-list li {
       display: flex;
       align-items: center;
@@ -1520,8 +1520,8 @@
       iconsContainer.style.flexWrap = 'wrap';
       iconsContainer.style.gap = '8px';
       iconsContainer.style.marginTop = '8px';
-      iconsContainer.style.marginBottom = '20px'; // Prevent cutoff in screenshots
-      iconsContainer.style.paddingBottom = '10px'; // Extra padding for safety
+      iconsContainer.style.marginBottom = '50px'; // Much more space to prevent cutoff
+      iconsContainer.style.paddingBottom = '30px'; // Extra padding for safety
       
       // Get unique rhythm tokens from exercises
       const usedTokens = new Set();
@@ -1617,14 +1617,17 @@
       saveBtn.style.display = 'none';
       closeBtn.style.display = 'none';
       
-      // Capture the results screen
-      const resultsScreen = document.getElementById('demoScreenResults');
+      // Wait a bit for browser to fully render everything
+      setTimeout(() => {
+        // Capture the results screen
+        const resultsScreen = document.getElementById('demoScreenResults');
       
       html2canvas(resultsScreen, {
         backgroundColor: '#ffffff',
         scale: 2, // Higher quality
         logging: false,
-        windowHeight: resultsScreen.scrollHeight + 100, // Capture full height
+        windowHeight: resultsScreen.scrollHeight + 200, // Extra buffer for full capture
+        height: resultsScreen.scrollHeight + 200, // Also set explicit height
         scrollY: 0,
         scrollX: 0,
         useCORS: true,
@@ -1659,6 +1662,7 @@
         saveBtn.style.display = 'block';
         closeBtn.style.display = 'block';
       });
+      }, 300); // Wait 300ms for full render
     }
 
     const SessionTracker = {
@@ -1935,7 +1939,7 @@
       </div>
 
       <!-- Tulemused -->
-      <div class="demo-screen" id="demoScreenResults">
+      <div class="demo-screen" id="demoScreenResults" style="min-height: 600px; padding-bottom: 60px;">
         <div style="text-align:center;margin-bottom:20px;">
           <div style="font-size:2.5rem;margin-bottom:8px;" id="demoResultEmoji">🎉</div>
           <div style="font-weight:700;font-size:1.2rem;" id="demoResultTitle">Harjutused lõpetatud!</div>
