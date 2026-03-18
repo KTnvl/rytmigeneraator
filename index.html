@@ -365,7 +365,7 @@
       display: none;
     }
     .demo-next-btn.visible { display: block; }
-    .demo-results-list { list-style: none; padding: 0; margin: 0 0 20px; }
+    .demo-results-list { list-style: none; padding: 0 0 30px 0; margin: 0 0 20px; min-height: 200px; }
     .demo-results-list li {
       display: flex;
       align-items: center;
@@ -405,7 +405,7 @@
   <header>
     <div>
       <h1>Rütmiharjutuste generaator (beeta)</h1>
-      <div class="tagline">Vali rütmid, taktimõõt ja pikkus – genereeri uus harjutus.</div>
+      <div class="tagline">Vali rütmid, taktimõõt ja pikkus – siis genereeri uus harjutus.</div>
     </div>
     <button id="btnToggleUI" type="button" class="ghost" style="align-self: flex-start;">⚙️ Peida kontrollid</button>
   </header>
@@ -1520,6 +1520,8 @@
       iconsContainer.style.flexWrap = 'wrap';
       iconsContainer.style.gap = '8px';
       iconsContainer.style.marginTop = '8px';
+      iconsContainer.style.marginBottom = '20px'; // Prevent cutoff in screenshots
+      iconsContainer.style.paddingBottom = '10px'; // Extra padding for safety
       
       // Get unique rhythm tokens from exercises
       const usedTokens = new Set();
@@ -1621,7 +1623,12 @@
       html2canvas(resultsScreen, {
         backgroundColor: '#ffffff',
         scale: 2, // Higher quality
-        logging: false
+        logging: false,
+        windowHeight: resultsScreen.scrollHeight + 100, // Capture full height
+        scrollY: 0,
+        scrollX: 0,
+        useCORS: true,
+        allowTaint: true
       }).then(canvas => {
         // Convert to blob and download
         canvas.toBlob(blob => {
